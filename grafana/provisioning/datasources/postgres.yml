@@ -1,0 +1,18 @@
+apiVersion: 1
+
+datasources:
+  - name: SGCC_PostgreSQL
+    type: postgres
+    access: proxy
+    url: postgres-sink:5432
+    database: sgcc_dw_db
+    user: sgcc_user
+    secureJsonData:
+      password: sgcc_pass_2024
+    jsonData:
+      sslmode: disable
+      maxOpenConns: 100
+      maxIdleConns: 100
+      connMaxLifetime: 14400
+    isDefault: true
+    editable: true

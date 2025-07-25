@@ -1,0 +1,275 @@
+<mxfile host="app.diagrams.net" modified="2024-12-19T10:00:00.000Z" agent="5.0" etag="xxx" version="24.7.17" type="device">
+  <diagram name="国网风控数仓技术架构" id="architecture">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- 标题 -->
+        <mxCell id="title" value="国网风控数仓实时数据处理系统架构" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#1f4e79;" vertex="1" parent="1">
+          <mxGeometry x="527" y="20" width="600" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- 数据源层 -->
+        <mxCell id="datasource_layer" value="数据源层 (Data Source Layer)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="100" width="300" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- 设备传感器 -->
+        <mxCell id="sensors" value="设备传感器\n(IoT Sensors)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="50" y="170" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- SCADA系统 -->
+        <mxCell id="scada" value="SCADA系统\n(监控数据采集)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="190" y="170" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- 客户系统 -->
+        <mxCell id="customer_sys" value="客户系统\n(CRM/计费)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="330" y="170" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- PostgreSQL Source -->
+        <mxCell id="pg_source" value="PostgreSQL Source\n(ODS层)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="150" y="280" width="200" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- ODS表 -->
+        <mxCell id="ods_tables" value="• equipment_info (设备信息)\n• customer_info (客户信息)\n• power_consumption (用电数据)\n• equipment_status (设备状态)\n• alert_records (告警记录)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;" vertex="1" parent="1">
+          <mxGeometry x="80" y="390" width="340" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- 实时处理层 -->
+        <mxCell id="processing_layer" value="实时处理层 (Real-time Processing Layer)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="550" y="100" width="400" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- Flink CDC -->
+        <mxCell id="flink_cdc" value="Flink CDC\n(变更数据捕获)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="500" y="170" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- Flink Stream Processing -->
+        <mxCell id="flink_stream" value="Flink Stream\nProcessing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="650" y="170" width="150" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- 状态管理 -->
+        <mxCell id="state_mgmt" value="状态管理\n(RocksDB)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="830" y="170" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- 数据处理逻辑 -->
+        <mxCell id="processing_logic" value="数据处理逻辑:\n• 数据清洗与标准化\n• 业务规则应用\n• 实时聚合计算\n• 窗口函数处理\n• 维度表关联" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;" vertex="1" parent="1">
+          <mxGeometry x="550" y="280" width="300" height="120" as="geometry" />
+        </mxCell>
+        
+        <!-- 数据服务层 -->
+        <mxCell id="service_layer" value="数据服务层 (Data Service Layer)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="100" width="350" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- PostgreSQL Sink -->
+        <mxCell id="pg_sink" value="PostgreSQL Sink\n(ADS层)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="170" width="200" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- ADS表 -->
+        <mxCell id="ads_tables" value="• ads_realtime_dashboard (实时大屏)\n• ads_equipment_health (设备健康)\n• ads_customer_behavior (客户行为)\n• ads_alert_statistics (告警统计)\n• ads_power_quality (电力质量)\n• ads_risk_assessment (风险评估)\n• ads_energy_efficiency (能效分析)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="280" width="400" height="140" as="geometry" />
+        </mxCell>
+        
+        <!-- 应用层 -->
+        <mxCell id="app_layer" value="应用层 (Application Layer)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="460" width="350" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- 实时大屏 -->
+        <mxCell id="dashboard" value="实时监控大屏" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="520" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- 业务报表 -->
+        <mxCell id="reports" value="业务分析报表" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="520" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- API服务 -->
+        <mxCell id="api_service" value="API服务" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="520" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- 监控运维层 -->
+        <mxCell id="ops_layer" value="监控运维层 (Operations Layer)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="620" width="1320" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- Flink Web UI -->
+        <mxCell id="flink_ui" value="Flink Web UI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="100" y="680" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Prometheus -->
+        <mxCell id="prometheus" value="Prometheus\n指标监控" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="250" y="680" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Grafana -->
+        <mxCell id="grafana" value="Grafana\n可视化" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="400" y="680" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- ELK Stack -->
+        <mxCell id="elk" value="ELK Stack\n日志分析" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="550" y="680" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- 告警系统 -->
+        <mxCell id="alerting" value="告警系统" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="700" y="680" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- 数据质量监控 -->
+        <mxCell id="data_quality" value="数据质量监控" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="850" y="680" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- 性能监控 -->
+        <mxCell id="perf_monitor" value="性能监控" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="680" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- 运维管理 -->
+        <mxCell id="ops_mgmt" value="运维管理" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="680" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- 业务指标框 -->
+        <mxCell id="metrics_box" value="核心业务指标" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="780" width="200" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="metrics_content" value="• 数据延迟: &lt; 30秒\n• 数据吞吐量: &gt; 10,000条/秒\n• 系统可用性: &gt; 99.9%\n• 故障预测准确率: &gt; 85%\n• 设备健康度覆盖率: 100%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;" vertex="1" parent="1">
+          <mxGeometry x="80" y="820" width="300" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- 技术栈框 -->
+        <mxCell id="tech_stack_box" value="技术栈" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="420" y="780" width="200" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="tech_stack_content" value="• 流处理: Apache Flink\n• 数据库: PostgreSQL\n• 容器化: Docker\n• 监控: Prometheus + Grafana\n• 日志: ELK Stack\n• 状态存储: RocksDB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;" vertex="1" parent="1">
+          <mxGeometry x="420" y="820" width="300" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- 数据分层框 -->
+        <mxCell id="data_layers_box" value="数据分层架构" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="760" y="780" width="200" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="data_layers_content" value="• ODS层: 原始数据存储\n• DWD层: 数据清洗标准化\n• DWS层: 数据汇总聚合\n• ADS层: 应用数据服务\n• API层: 数据接口服务" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;" vertex="1" parent="1">
+          <mxGeometry x="760" y="820" width="300" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- 安全合规框 -->
+        <mxCell id="security_box" value="安全与合规" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="780" width="200" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="security_content" value="• 访问控制: RBAC\n• 数据加密: 传输+存储\n• 审计日志: 完整记录\n• 备份恢复: 定期备份\n• 合规标准: ISO 27001" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="820" width="300" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- 数据流箭头 -->
+        <mxCell id="flow1" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;strokeColor=#d79b00;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="110" y="240" as="sourcePoint" />
+            <mxPoint x="200" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="flow2" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;strokeColor=#d79b00;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="250" y="240" as="sourcePoint" />
+            <mxPoint x="250" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="flow3" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;strokeColor=#d79b00;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="240" as="sourcePoint" />
+            <mxPoint x="300" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="flow4" value="CDC" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;strokeColor=#d79b00;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="360" y="320" as="sourcePoint" />
+            <mxPoint x="500" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="flow5" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;strokeColor=#d79b00;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="200" as="sourcePoint" />
+            <mxPoint x="650" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="flow6" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;strokeColor=#d79b00;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="800" y="200" as="sourcePoint" />
+            <mxPoint x="830" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="flow7" value="Sink" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;strokeColor=#d79b00;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="850" y="340" as="sourcePoint" />
+            <mxPoint x="1100" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="flow8" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;strokeColor=#82b366;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1200" y="250" as="sourcePoint" />
+            <mxPoint x="1200" y="460" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="flow9" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;strokeColor=#82b366;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1060" y="500" as="sourcePoint" />
+            <mxPoint x="1060" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="flow10" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;strokeColor=#82b366;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1200" y="500" as="sourcePoint" />
+            <mxPoint x="1200" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="flow11" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;strokeColor=#82b366;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1340" y="500" as="sourcePoint" />
+            <mxPoint x="1340" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- 数据流标签 -->
+        <mxCell id="data_flow_label" value="实时数据流" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="600" y="250" width="80" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- 版本信息 -->
+        <mxCell id="version_info" value="架构版本: v1.0 | 更新时间: 2024年12月 | 维护团队: 国网数字化团队" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="527" y="950" width="600" height="20" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
