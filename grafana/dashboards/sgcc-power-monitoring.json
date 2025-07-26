@@ -277,7 +277,7 @@
            "group": [],
            "metricColumn": "none",
            "rawQuery": true,
-           "rawSql": "SELECT\n  NOW() AS time,\n  EXTRACT(EPOCH FROM (NOW() - MAX(update_time))) as \"实时监控表数据延迟(秒)\"\nFROM ads_realtime_dashboard\nUNION ALL\nSELECT\n  NOW() AS time,\n  EXTRACT(EPOCH FROM (NOW() - MAX(update_time))) as \"设备健康表数据延迟(秒)\"\nFROM ads_equipment_health\nUNION ALL\nSELECT\n  NOW() AS time,\n  EXTRACT(EPOCH FROM (NOW() - MAX(update_time))) as \"电力质量表数据延迟(秒)\"\nFROM ads_power_quality",
+           "rawSql": "SELECT\n  NOW() AS time,\n  EXTRACT(EPOCH FROM (NOW() - MAX(update_time))) as \"实时监控表数据延迟(秒)\"\nFROM ads_realtime_dashboard\nUNION ALL\nSELECT\n  NOW() AS time,\n  EXTRACT(EPOCH FROM (NOW() - MAX(analysis_time))) as \"设备健康表数据延迟(秒)\"\nFROM ads_equipment_health\nUNION ALL\nSELECT\n  NOW() AS time,\n  EXTRACT(EPOCH FROM (NOW() - MAX(analysis_time))) as \"电力质量表数据延迟(秒)\"\nFROM ads_power_quality",
            "refId": "A",
            "select": [
              [
@@ -846,7 +846,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT AVG(overall_overall_risk_score) as value FROM ads_risk_assessment WHERE analysis_time >= NOW() - INTERVAL '5 minutes'",
+          "rawSql": "SELECT AVG(overall_risk_score) as value FROM ads_risk_assessment WHERE assessment_time >= NOW() - INTERVAL '5 minutes'",
           "refId": "A"
         }
       ],
@@ -1255,7 +1255,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  analysis_time as time,\n  AVG(overall_quality) as \"电力质量评分\",\n  AVG(health_score) as \"设备健康度\"\nFROM ads_power_quality pq\nJOIN ads_equipment_health eh ON pq.equipment_id = eh.equipment_id AND pq.analysis_time = eh.analysis_time\nWHERE pq.analysis_time >= NOW() - INTERVAL '2 hours'\nGROUP BY analysis_time\nORDER BY analysis_time",
+          "rawSql": "SELECT \n  analysis_time as time,\n  AVG(overall_quality) as \"电力质量评分\"\nFROM ads_power_quality \nWHERE analysis_time >= NOW() - INTERVAL '24 hours'\nGROUP BY analysis_time\nORDER BY analysis_time",
           "refId": "A"
         }
       ],
@@ -1472,7 +1472,7 @@ ORDER BY stat_time",
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  equipment_id as \"设备ID\",\n  customer_id as \"客户ID\",\n  overall_overall_risk_score as \"风险评分\",\n  risk_level as \"风险等级\",\n  risk_factors as \"风险因素\",\n  analysis_time as \"分析时间\"\nFROM ads_risk_assessment \nWHERE risk_level IN ('HIGH', 'CRITICAL')\nORDER BY overall_overall_risk_score DESC, analysis_time DESC \nLIMIT 10",
+          "rawSql": "SELECT \n  equipment_id as \"设备ID\",\n  customer_id as \"客户ID\",\n  overall_risk_score as \"风险评分\",\n  risk_level as \"风险等级\",\n  assessment_time as \"分析时间\"\nFROM ads_risk_assessment \nWHERE risk_level IN ('HIGH', 'CRITICAL')\nORDER BY overall_risk_score DESC, assessment_time DESC \nLIMIT 10",
           "refId": "A"
         }
       ],
@@ -1566,7 +1566,7 @@ ORDER BY stat_time",
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  analysis_time as time,\n  AVG(efficiency_ratio) as \"能效评分\",\n  AVG(energy_saving_potential) as \"节能潜力\"\nFROM ads_energy_efficiency \nWHERE analysis_time >= NOW() - INTERVAL '24 hours'\nGROUP BY analysis_time\nORDER BY analysis_time",
+          "rawSql": "SELECT \n  analysis_time as time,\n  AVG(efficiency_ratio) as \"能效评分\",\n  AVG(potential_savings) as \"节能潜力\"\nFROM ads_energy_efficiency \nWHERE analysis_time >= NOW() - INTERVAL '24 hours'\nGROUP BY analysis_time\nORDER BY analysis_time",
           "refId": "A"
         }
       ],

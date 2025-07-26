@@ -3546,7 +3546,7 @@ class DataManager:
                     # 尝试从ADS表获取时间信息
                     try:
                         cursor.execute("""
-                            SELECT MAX(last_update_time) FROM ads_realtime_dashboard
+                            SELECT MAX(update_time) FROM ads_realtime_dashboard
                         """)
                         sink_latest = cursor.fetchone()[0]
                     except Exception:
@@ -4104,7 +4104,7 @@ class DataManager:
                     # 检查ads_realtime_dashboard表的详细信息
                     print("\n🔍 ads_realtime_dashboard表详细信息:")
                     try:
-                        cursor.execute("SELECT metric_name, metric_value, unit, last_update_time FROM ads_realtime_dashboard ORDER BY last_update_time DESC LIMIT 5")
+                        cursor.execute("SELECT metric_name, metric_value, metric_unit, update_time FROM ads_realtime_dashboard ORDER BY update_time DESC LIMIT 5")
                         rows = cursor.fetchall()
                         if rows:
                             for row in rows:
@@ -4134,7 +4134,10 @@ class DataManager:
                 with conn.cursor() as cursor:
                     print(f"\n👥 创建 {customer_count} 个测试客户...")
                     
-                    # 清理并创建客户数据
+                    # 清理相关数据（注意外键约束顺序）
+                    print("   🧹 清理旧的测试数据...")
+                    cursor.execute("DELETE FROM alert_records WHERE equipment_id LIKE 'DASH_%'")
+                    cursor.execute("DELETE FROM power_consumption WHERE customer_id LIKE 'DASH_%'")
                     cursor.execute("DELETE FROM customer_info WHERE customer_id LIKE 'DASH_%'")
                     
                     customer_types = ['INDUSTRIAL', 'COMMERCIAL', 'RESIDENTIAL']
@@ -4155,7 +4158,8 @@ class DataManager:
                     
                     print(f"\n🔧 创建 {equipment_count} 个测试设备...")
                     
-                    # 清理并创建设备数据
+                    # 清理设备相关数据（注意外键约束顺序）
+                    cursor.execute("DELETE FROM power_consumption WHERE equipment_id LIKE 'DASH_%'")
                     cursor.execute("DELETE FROM equipment_info WHERE equipment_id LIKE 'DASH_%'")
                     
                     equipment_types = ['TRANSFORMER', 'SWITCHGEAR', 'BREAKER', 'CABLE', 'SWITCH']
@@ -4469,8 +4473,7 @@ class DataManager:
         try:
             with self.get_sink_connection() as conn:
                 with conn.cursor() as cursor:
-                    current_time = datetime.datetime.now()
-                    
+                    # 生成过去24小时的历史数据，而不是单一时间点
                     print("\n📊 生成实时监控大屏数据...")
                     # 1. 生成实时监控大屏数据 - 修复主键冲突问题
                     dashboard_metrics = [
@@ -4491,14 +4494,28 @@ class DataManager:
                     # 先清空ads_realtime_dashboard表避免主键冲突
                     cursor.execute("DELETE FROM ads_realtime_dashboard WHERE metric_category IN ('POWER', 'EQUIPMENT', 'ALERT', 'CUSTOMER', 'EFFICIENCY')")
                     
-                    for metric_name, value, unit, desc, category in dashboard_metrics:
+                    # 为实时监控数据生成不同的时间戳
+                    base_time = datetime.datetime.now()
+                    for i, (metric_name, value, unit, desc, category) in enumerate(dashboard_metrics):
+                        # 每个指标使用稍微不同的时间，模拟实时更新
+                        metric_time = base_time - datetime.timedelta(minutes=i)
                         cursor.execute("""
-                            INSERT INTO ads_realtime_dashboard 
-                            (metric_name, metric_value, metric_unit, metric_desc, metric_category, last_update_time)
-                            VALUES (%s, %s, %s, %s, %s, %s)
-                        """, (metric_name, value, unit, desc, category, current_time))
+            INSERT INTO ads_realtime_dashboard
+            (metric_name, metric_value, metric_unit, metric_desc, metric_category, update_time)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (metric_name, value, unit, desc, category, metric_time))
                     
                     print(f"   ✅ 已生成 {len(dashboard_metrics)} 条实时监控指标")
+                    
+                    # 清空现有数据以避免主键冲突
+                    print("\n🗑️  清空现有ADS表数据...")
+                    cursor.execute("DELETE FROM ads_equipment_health")
+                    cursor.execute("DELETE FROM ads_customer_behavior")
+                    cursor.execute("DELETE FROM ads_alert_statistics")
+                    cursor.execute("DELETE FROM ads_power_quality")
+                    cursor.execute("DELETE FROM ads_risk_assessment")
+                    cursor.execute("DELETE FROM ads_energy_efficiency")
+                    print("   ✅ 已清空所有ADS表数据")
                     
                     print("\n🔧 生成设备健康度数据...")
                     # 2. 生成设备健康度数据
@@ -4510,7 +4527,9 @@ class DataManager:
                         ('EQ005', '开关设备5号', 'SWITCH', '配电房E', 81.7, 'MEDIUM', 26.7, 71.4, 91.5, 1, 18, 85.9)
                     ]
                     
-                    for eq_id, eq_name, eq_type, location, health, risk, temp, load, eff, faults, maint_days, pred in equipment_data:
+                    # 为设备健康度数据生成过去几小时的时间戳
+                    for i, (eq_id, eq_name, eq_type, location, health, risk, temp, load, eff, faults, maint_days, pred) in enumerate(equipment_data):
+                        equipment_time = base_time - datetime.timedelta(hours=i+1)
                         cursor.execute("""
                             INSERT INTO ads_equipment_health 
                             (equipment_id, equipment_name, equipment_type, location, health_score, 
@@ -4518,7 +4537,7 @@ class DataManager:
                              maintenance_days, prediction_score, recommendation, analysis_time)
                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """, (eq_id, eq_name, eq_type, location, health, risk, temp, load, eff, 
-                              faults, maint_days, pred, f"建议关注{eq_name}的运行状态", current_time))
+                              faults, maint_days, pred, f"建议关注{eq_name}的运行状态", equipment_time))
                     
                     print("   ✅ 已生成 5 条设备健康度记录")
                     
@@ -4531,7 +4550,9 @@ class DataManager:
                         ('CUST004', '工业客户D', 'INDUSTRIAL', 'DAILY', 2150.4, 89.6, 156.7, 0.94, 'STABLE', 0, 25805.0, 'EXCELLENT', 1075.2)
                     ]
                     
-                    for cust_id, cust_name, cust_type, period, consumption, avg_power, peak_power, pf, pattern, anomalies, cost, rating, carbon in customer_data:
+                    # 为客户行为数据生成不同的时间戳
+                    for i, (cust_id, cust_name, cust_type, period, consumption, avg_power, peak_power, pf, pattern, anomalies, cost, rating, carbon) in enumerate(customer_data):
+                        customer_time = base_time - datetime.timedelta(hours=i+2)
                         cursor.execute("""
                             INSERT INTO ads_customer_behavior 
                             (customer_id, customer_name, customer_type, analysis_period, total_consumption, 
@@ -4539,21 +4560,23 @@ class DataManager:
                              cost_estimation, efficiency_rating, carbon_emission, analysis_time)
                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """, (cust_id, cust_name, cust_type, period, consumption, avg_power, peak_power, 
-                              pf, pattern, anomalies, cost, rating, carbon, current_time))
+                              pf, pattern, anomalies, cost, rating, carbon, customer_time))
                     
                     print("   ✅ 已生成 4 条客户行为分析记录")
                     
                     print("\n⚠️  生成告警统计数据...")
-                    # 4. 生成告警统计数据
-                    cursor.execute("""
-                        INSERT INTO ads_alert_statistics 
-                        (stat_period, stat_time, total_alerts, critical_alerts, error_alerts, 
-                         warning_alerts, info_alerts, equipment_alerts, power_alerts, voltage_alerts, 
-                         overload_alerts, resolved_alerts, avg_resolution_time, alert_rate, resolution_rate)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """, ('DAILY', current_time, 23, 3, 5, 12, 3, 8, 7, 5, 3, 18, 2.5, 4.2, 78.3))
+                    # 4. 生成告警统计数据 - 生成过去几天的数据
+                    for day_offset in range(3):  # 生成过去3天的告警统计
+                        alert_time = base_time - datetime.timedelta(days=day_offset)
+                        cursor.execute("""
+                            INSERT INTO ads_alert_statistics 
+                            (stat_period, stat_time, total_alerts, critical_alerts, error_alerts, 
+                             warning_alerts, info_alerts, equipment_alerts, power_alerts, voltage_alerts, 
+                             overload_alerts, resolved_alerts, avg_resolution_time, alert_rate, resolution_rate)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, ('DAILY', alert_time, 23-day_offset*2, 3-day_offset, 5-day_offset, 12-day_offset*2, 3, 8-day_offset, 7-day_offset, 5-day_offset, 3-day_offset, 18-day_offset*2, 2.5+day_offset*0.2, 4.2-day_offset*0.3, 78.3+day_offset*2))
                     
-                    print("   ✅ 已生成 1 条告警统计记录")
+                    print("   ✅ 已生成 3 条告警统计记录")
                     
                     print("\n⚡ 生成电力质量数据...")
                     # 5. 生成电力质量数据
@@ -4563,7 +4586,9 @@ class DataManager:
                         ('EQ003', '断路器3号', 'CUST003', '居民客户C', 82.1, 91.8, 85.6, 4.1, 3.2, 1.2, 2, 1, 0, 84.2, 'FAIR')
                     ]
                     
-                    for eq_id, eq_name, cust_id, cust_name, v_stab, f_stab, pf_qual, harm, unbal, flicker, inter, sag, swell, overall, grade in quality_data:
+                    # 为电力质量数据生成过去几小时的时间戳
+                    for i, (eq_id, eq_name, cust_id, cust_name, v_stab, f_stab, pf_qual, harm, unbal, flicker, inter, sag, swell, overall, grade) in enumerate(quality_data):
+                        quality_time = base_time - datetime.timedelta(hours=i+6)
                         cursor.execute("""
                             INSERT INTO ads_power_quality 
                             (equipment_id, equipment_name, customer_id, customer_name, analysis_time,
@@ -4571,24 +4596,26 @@ class DataManager:
                              voltage_unbalance, flicker_severity, interruption_count, sag_count, swell_count,
                              overall_quality, quality_grade, improvement_suggestions)
                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (eq_id, eq_name, cust_id, cust_name, current_time, v_stab, f_stab, pf_qual, 
+                        """, (eq_id, eq_name, cust_id, cust_name, quality_time, v_stab, f_stab, pf_qual, 
                               harm, unbal, flicker, inter, sag, swell, overall, grade, f"建议优化{eq_name}的电能质量"))
                     
                     print("   ✅ 已生成 3 条电力质量记录")
                     
                     print("\n🎯 生成风险评估数据...")
-                    # 6. 生成风险评估数据
-                    cursor.execute("""
-                        INSERT INTO ads_risk_assessment 
-                        (assessment_time, overall_risk_score, equipment_risk_score, power_risk_score,
-                         customer_risk_score, high_risk_equipment_count, critical_alerts_24h,
-                         power_quality_issues, load_forecast_accuracy, system_stability_index,
-                         emergency_response_time, risk_trend, mitigation_actions, next_assessment_time)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (current_time, 25.8, 18.5, 32.1, 28.9, 1, 3, 2, 94.2, 91.7, 8.5, 
-                          'STABLE', '加强设备巡检，优化负荷分配', current_time + datetime.timedelta(days=1)))
+                    # 6. 生成风险评估数据 - 生成过去几天的数据
+                    for day_offset in range(3):  # 生成过去3天的风险评估
+                        risk_time = base_time - datetime.timedelta(days=day_offset)
+                        cursor.execute("""
+                            INSERT INTO ads_risk_assessment 
+                            (assessment_time, overall_risk_score, equipment_risk_score, power_risk_score,
+                             customer_risk_score, high_risk_equipment_count, critical_alerts_24h,
+                             power_quality_issues, load_forecast_accuracy, system_stability_index,
+                             emergency_response_time, risk_trend, mitigation_actions, next_assessment_time)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (risk_time, 25.8+day_offset*2, 18.5+day_offset*1.5, 32.1-day_offset*2, 28.9+day_offset*1.2, 1+day_offset, 3-day_offset, 2-day_offset, 94.2-day_offset*0.5, 91.7+day_offset*0.8, 8.5-day_offset*0.3, 
+                              'STABLE', '加强设备巡检，优化负荷分配', risk_time + datetime.timedelta(days=1)))
                     
-                    print("   ✅ 已生成 1 条风险评估记录")
+                    print("   ✅ 已生成 3 条风险评估记录")
                     
                     print("\n💡 生成能效分析数据...")
                     # 7. 生成能效分析数据
@@ -4598,7 +4625,9 @@ class DataManager:
                         ('SYSTEM', 'SYS001', '整体系统', 'DAILY', 5000.0, 4650.0, 350.0, 93.0, 92.0, 1.0, 0.48, 0.78, 2100.0, 'GOOD')
                     ]
                     
-                    for scope, scope_id, scope_name, period, input_e, output_e, loss_e, ratio, benchmark, gap, carbon, cost, savings, grade in efficiency_data:
+                    # 为能效分析数据生成过去几小时的时间戳
+                    for i, (scope, scope_id, scope_name, period, input_e, output_e, loss_e, ratio, benchmark, gap, carbon, cost, savings, grade) in enumerate(efficiency_data):
+                        efficiency_time = base_time - datetime.timedelta(hours=i+9)
                         cursor.execute("""
                             INSERT INTO ads_energy_efficiency 
                             (analysis_scope, scope_id, scope_name, analysis_period, analysis_time,
@@ -4606,7 +4635,7 @@ class DataManager:
                              efficiency_gap, carbon_intensity, cost_per_kwh, potential_savings, efficiency_grade,
                              optimization_suggestions)
                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (scope, scope_id, scope_name, period, current_time, input_e, output_e, loss_e, 
+                        """, (scope, scope_id, scope_name, period, efficiency_time, input_e, output_e, loss_e, 
                               ratio, benchmark, gap, carbon, cost, savings, grade, f"建议优化{scope_name}的能效表现"))
                     
                     print("   ✅ 已生成 3 条能效分析记录")
@@ -4631,6 +4660,252 @@ class DataManager:
                     
         except Exception as e:
             print(f"❌ 生成基础大屏数据失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def _generate_rich_dashboard_data_fixed(self):
+        """生成丰富的历史大屏数据 - 修复版"""
+        print("\n📊 生成丰富的历史大屏数据 (修复版)...")
+        print("此功能将生成过去几天的历史数据，用于展示趋势图表")
+        
+        try:
+            days = int(input("请输入要生成的历史天数 (1-7，推荐3): ").strip() or "3")
+            if days < 1 or days > 7:
+                print("❌ 天数必须在1-7之间")
+                return
+                
+            print(f"\n📅 开始生成过去 {days} 天的历史数据...")
+            
+            with self.get_sink_connection() as conn:
+                with conn.cursor() as cursor:
+                    import random
+                    total_records = 0
+                    
+                    # 清空历史数据
+                    cursor.execute("DELETE FROM ads_realtime_dashboard WHERE metric_name LIKE '%_hist_%'")
+                    
+                    for day_offset in range(days):
+                        target_date = datetime.datetime.now() - datetime.timedelta(days=day_offset)
+                        
+                        # 为每天生成6小时间隔的数据点
+                        for hour in [0, 6, 12, 18]:
+                            hour_time = target_date.replace(hour=hour, minute=0, second=0, microsecond=0)
+                            
+                            # 生成该时间点的历史数据
+                            base_power = 1200 + random.uniform(-200, 300)
+                            health_score = 80 + random.uniform(-10, 15)
+                            alert_count = random.randint(0, 8)
+                            efficiency = 85 + random.uniform(-5, 10)
+                            
+                            # 插入历史数据点
+                            hist_metrics = [
+                                (f'power_hist_{day_offset}_{hour}', base_power, 'MW', f'第{day_offset+1}天{hour}时功率', 'POWER_HIST'),
+                                (f'health_hist_{day_offset}_{hour}', health_score, '分', f'第{day_offset+1}天{hour}时健康度', 'EQUIPMENT_HIST'),
+                                (f'alert_hist_{day_offset}_{hour}', alert_count, '个', f'第{day_offset+1}天{hour}时告警', 'ALERT_HIST'),
+                                (f'efficiency_hist_{day_offset}_{hour}', efficiency, '%', f'第{day_offset+1}天{hour}时效率', 'EFFICIENCY_HIST')
+                            ]
+                            
+                            for metric_name, value, unit, desc, category in hist_metrics:
+                                cursor.execute("""
+                                    INSERT INTO ads_realtime_dashboard 
+                                    (metric_name, metric_value, metric_unit, metric_desc, metric_category, update_time)
+                                    VALUES (%s, %s, %s, %s, %s, %s)
+                                """, (metric_name, value, unit, desc, category, hour_time))
+                                total_records += 1
+                    
+                    conn.commit()
+                    
+                    print(f"\n✅ 丰富历史数据生成完成!")
+                    print(f"   - 生成了 {days} 天的历史数据")
+                    print(f"   - 每天 4 个时间点，每个时间点 4 个指标")
+                    print(f"   - 总计: {total_records} 条历史记录")
+                    print("\n💡 历史数据可用于Grafana大屏的趋势图表显示")
+                    
+        except Exception as e:
+            print(f"❌ 生成丰富历史数据失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def _generate_realtime_dashboard_data_fixed(self):
+        """生成实时大屏数据 - 修复版"""
+        print("\n⚡ 启动实时数据生成器 (修复版)...")
+        print("此功能将持续生成实时数据，按Ctrl+C停止")
+        
+        try:
+            interval = int(input("请输入数据生成间隔(秒，推荐10): ").strip() or "10")
+            if interval < 5:
+                print("❌ 间隔不能小于5秒")
+                return
+                
+            print(f"\n⏰ 开始每 {interval} 秒生成一次实时数据...")
+            print("按 Ctrl+C 停止生成")
+            
+            import random
+            import time
+            count = 0
+            
+            while True:
+                try:
+                    with self.get_sink_connection() as conn:
+                        with conn.cursor() as cursor:
+                            current_time = datetime.datetime.now()
+                            count += 1
+                            
+                            # 生成实时变化的数据
+                            realtime_metrics = [
+                                (f'rt_power_{count}', 1200 + random.uniform(-100, 150), 'MW', '实时总功率', 'REALTIME'),
+                                (f'rt_health_{count}', 85 + random.uniform(-5, 10), '分', '实时健康度', 'REALTIME'),
+                                (f'rt_alerts_{count}', random.randint(0, 5), '个', '实时告警数', 'REALTIME'),
+                                (f'rt_efficiency_{count}', 90 + random.uniform(-3, 7), '%', '实时效率', 'REALTIME')
+                            ]
+                            
+                            # 清空旧的实时数据
+                            cursor.execute("DELETE FROM ads_realtime_dashboard WHERE metric_category = 'REALTIME'")
+                            
+                            for metric_name, value, unit, desc, category in realtime_metrics:
+                                cursor.execute("""
+                                    INSERT INTO ads_realtime_dashboard 
+                                    (metric_name, metric_value, metric_unit, metric_desc, metric_category, update_time)
+                                    VALUES (%s, %s, %s, %s, %s, %s)
+                                """, (metric_name, value, unit, desc, category, current_time))
+                            
+                            conn.commit()
+                            
+                            print(f"\r⚡ 第 {count} 次更新 - {current_time.strftime('%H:%M:%S')} - 已生成 {len(realtime_metrics)} 条实时数据", end="", flush=True)
+                            
+                    time.sleep(interval)
+                    
+                except KeyboardInterrupt:
+                    print(f"\n\n🛑 实时数据生成已停止")
+                    print(f"   - 总共生成了 {count} 轮实时数据")
+                    print(f"   - 每轮 {len(realtime_metrics)} 条记录")
+                    break
+                except Exception as e:
+                    print(f"\n❌ 生成实时数据时出错: {e}")
+                    break
+                    
+        except Exception as e:
+            print(f"❌ 启动实时数据生成失败: {e}")
+    
+    def _clear_dashboard_data(self):
+        """清空大屏数据"""
+        print("\n🗑️  清空大屏数据")
+        print("⚠️  此操作将清空所有ADS表的数据，请谨慎操作!")
+        
+        confirm = input("\n确认清空所有大屏数据? (输入 'YES' 确认): ").strip()
+        if confirm != 'YES':
+            print("❌ 操作已取消")
+            return
+        
+        try:
+            with self.get_sink_connection() as conn:
+                with conn.cursor() as cursor:
+                    ads_tables = [
+                        'ads_realtime_dashboard',
+                        'ads_equipment_health', 
+                        'ads_customer_behavior',
+                        'ads_alert_statistics',
+                        'ads_power_quality',
+                        'ads_risk_assessment',
+                        'ads_energy_efficiency'
+                    ]
+                    
+                    total_deleted = 0
+                    for table in ads_tables:
+                        try:
+                            cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                            count_before = cursor.fetchone()[0]
+                            
+                            cursor.execute(f"DELETE FROM {table}")
+                            total_deleted += count_before
+                            
+                            print(f"   ✅ {table}: 清空 {count_before} 条记录")
+                        except Exception as e:
+                            print(f"   ❌ {table}: 清空失败 ({e})")
+                    
+                    conn.commit()
+                    
+                    print(f"\n🎉 大屏数据清空完成!")
+                    print(f"   - 总计清空: {total_deleted} 条记录")
+                    print("\n💡 现在可以重新生成测试数据")
+                    
+        except Exception as e:
+            print(f"❌ 清空大屏数据失败: {e}")
+    
+    def _fix_dashboard_data_issues(self):
+        """修复大屏数据问题"""
+        print("\n🔧 修复大屏数据问题")
+        print("此功能将检查并修复常见的数据问题")
+        
+        try:
+            with self.get_sink_connection() as conn:
+                with conn.cursor() as cursor:
+                    print("\n🔍 检查数据问题...")
+                    
+                    # 1. 检查重复数据
+                    cursor.execute("""
+                        SELECT metric_name, COUNT(*) as cnt 
+                        FROM ads_realtime_dashboard 
+                        GROUP BY metric_name 
+                        HAVING COUNT(*) > 1
+                    """)
+                    duplicates = cursor.fetchall()
+                    
+                    if duplicates:
+                        print(f"   ⚠️  发现 {len(duplicates)} 个重复的metric_name")
+                        for metric_name, count in duplicates:
+                            print(f"      - {metric_name}: {count} 条重复记录")
+                        
+                        # 修复重复数据
+                        print("\n🔧 修复重复数据...")
+                        for metric_name, count in duplicates:
+                            cursor.execute("""
+                                DELETE FROM ads_realtime_dashboard 
+                                WHERE metric_id NOT IN (
+                                    SELECT MIN(metric_id) 
+                                    FROM ads_realtime_dashboard 
+                                    WHERE metric_name = %s
+                                ) AND metric_name = %s
+                            """, (metric_name, metric_name))
+                        print("   ✅ 重复数据已修复")
+                    else:
+                        print("   ✅ 未发现重复数据")
+                    
+                    # 2. 检查NULL值
+                    cursor.execute("""
+                        SELECT COUNT(*) FROM ads_realtime_dashboard 
+                        WHERE metric_value IS NULL OR metric_name IS NULL
+                    """)
+                    null_count = cursor.fetchone()[0]
+                    
+                    if null_count > 0:
+                        print(f"   ⚠️  发现 {null_count} 条包含NULL值的记录")
+                        cursor.execute("""
+                            DELETE FROM ads_realtime_dashboard 
+                            WHERE metric_value IS NULL OR metric_name IS NULL
+                        """)
+                        print("   ✅ NULL值记录已清理")
+                    else:
+                        print("   ✅ 未发现NULL值问题")
+                    
+                    # 3. 更新时间戳
+                    cursor.execute("""
+                        UPDATE ads_realtime_dashboard 
+                        SET update_time = NOW() 
+                        WHERE update_time IS NULL
+                    """)
+                    
+                    conn.commit()
+                    
+                    print("\n🎉 数据问题修复完成!")
+                    print("   - 已清理重复数据")
+                    print("   - 已清理NULL值记录")
+                    print("   - 已更新时间戳")
+                    
+        except Exception as e:
+            print(f"❌ 修复数据问题失败: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _generate_rich_dashboard_data(self):
         """生成丰富的历史大屏数据"""
