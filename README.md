@@ -69,7 +69,7 @@ docker exec -it sql-client-sgcc /opt/flink/bin/sql-client.sh -f /opt/sql/fluss_a
 
 ```bash
 # 启动所有Docker服务
-直接在根目录执行
+# 直接在根目录执行
 
 docker-compose up -d
 ```
@@ -86,7 +86,7 @@ docker exec -it sql-client-sgcc /opt/flink/bin/sql-client.sh -f /opt/sql/fluss_a
 ```bash
 # 运行数据管理脚本
 python scripts/interactive_data_manager.py
-
+```
 
 
 ### 4. 访问Grafana
