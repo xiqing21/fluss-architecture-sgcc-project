@@ -1,0 +1,347 @@
+networks:
+  fluss-sgcc-network:
+    driver: bridge
+    name: fluss-sgcc-network
+services:
+  coordinator-server:
+    command: coordinatorServer
+    container_name: coordinator-server-sgcc
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+    - 'FLUSS_PROPERTIES=
+
+      zookeeper.address: zookeeper:2181
+
+      bind.listeners: FLUSS://coordinator-server:9123
+
+      remote.data.dir: /tmp/fluss/remote-data
+
+      datalake.format: paimon
+
+      datalake.paimon.metastore: filesystem
+
+      datalake.paimon.warehouse: /tmp/paimon
+
+      '
+    hostname: coordinator-server
+    image: fluss/fluss:0.7.0
+    networks:
+    - fluss-sgcc-network
+    ports:
+    - 9123:9123
+    restart: unless-stopped
+    volumes:
+    - shared-tmpfs:/tmp/paimon
+    - fluss_coordinator_data:/tmp/fluss
+  grafana:
+    container_name: sgcc-grafana
+    depends_on:
+      postgres-sgcc-sink:
+        condition: service_healthy
+    environment:
+    - GF_SECURITY_ADMIN_USER=admin
+    - GF_SECURITY_ADMIN_PASSWORD=admin123
+    - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    image: grafana/grafana:latest
+    networks:
+    - fluss-sgcc-network
+    ports:
+    - 3000:3000
+    restart: unless-stopped
+    volumes:
+    - grafana-storage:/var/lib/grafana
+    - ./grafana/provisioning:/etc/grafana/provisioning
+    - ./grafana/dashboards:/var/lib/grafana/dashboards
+  jobmanager:
+    command: jobmanager
+    container_name: jobmanager-sgcc
+    depends_on:
+      coordinator-server:
+        condition: service_started
+      postgres-sgcc-sink:
+        condition: service_healthy
+      postgres-sgcc-source:
+        condition: service_healthy
+    environment:
+    - 'FLINK_PROPERTIES=
+
+      jobmanager.rpc.address: jobmanager
+
+      execution.checkpointing.interval: 60s
+
+      execution.checkpointing.externalized-checkpoint-retention: RETAIN_ON_CANCELLATION
+
+      state.backend: hashmap
+
+      state.checkpoints.dir: file:///tmp/flink-checkpoints
+
+      state.savepoints.dir: file:///tmp/flink-savepoints
+
+      parallelism.default: 2
+
+      '
+    healthcheck:
+      interval: 30s
+      retries: 5
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:8081/overview
+      timeout: 10s
+    hostname: jobmanager
+    image: fluss/quickstart-flink:1.20-0.7.0
+    networks:
+    - fluss-sgcc-network
+    ports:
+    - 8091:8081
+    volumes:
+    - shared-tmpfs:/tmp/paimon
+    - flink_checkpoints:/tmp/flink-checkpoints
+    - flink_savepoints:/tmp/flink-savepoints
+    - ./fluss/jars/postgresql-42.7.7.jar:/opt/flink/lib/postgresql-42.7.7.jar
+    - ./fluss/jars/flink-sql-connector-postgres-cdc-3.1.1.jar:/opt/flink/lib/flink-sql-connector-postgres-cdc-3.1.1.jar
+    - ./fluss/jars/flink-connector-jdbc-core-3.3.0-1.20.jar:/opt/flink/lib/flink-connector-jdbc-core-3.3.0-1.20.jar
+    - ./fluss/jars/flink-connector-jdbc-3.3.0-1.20.jar:/opt/flink/lib/flink-connector-jdbc-3.3.0-1.20.jar
+  postgres-sgcc-sink:
+    command: "postgres -c shared_preload_libraries='pg_stat_statements'\n        \
+      \ -c track_activities=on\n         -c track_counts=on\n"
+    container_name: postgres-sgcc-sink
+    environment:
+      POSTGRES_DB: sgcc_dw_db
+      POSTGRES_PASSWORD: sgcc_pass_2024
+      POSTGRES_USER: sgcc_user
+    healthcheck:
+      interval: 10s
+      retries: 10
+      test:
+      - CMD-SHELL
+      - pg_isready -U sgcc_user -d sgcc_dw_db
+      timeout: 5s
+    hostname: postgres-sgcc-sink
+    image: postgres:15
+    networks:
+    - fluss-sgcc-network
+    ports:
+    - 5443:5432
+    volumes:
+    - ./postgres_sink/init:/docker-entrypoint-initdb.d
+    - postgres_sgcc_sink_data:/var/lib/postgresql/data
+  postgres-sgcc-source:
+    command: "postgres -c wal_level=logical \n         -c max_replication_slots=20\
+      \ \n         -c max_wal_senders=20\n         -c shared_preload_libraries='pg_stat_statements'\n\
+      \         -c track_activities=on\n         -c track_counts=on\n"
+    container_name: postgres-sgcc-source
+    environment:
+      POSTGRES_DB: sgcc_source_db
+      POSTGRES_PASSWORD: sgcc_pass_2024
+      POSTGRES_USER: sgcc_user
+    healthcheck:
+      interval: 10s
+      retries: 10
+      test:
+      - CMD-SHELL
+      - pg_isready -U sgcc_user -d sgcc_source_db
+      timeout: 5s
+    hostname: postgres-sgcc-source
+    image: postgres:15
+    networks:
+    - fluss-sgcc-network
+    ports:
+    - 5442:5432
+    volumes:
+    - ./postgres_source/init:/docker-entrypoint-initdb.d
+    - postgres_sgcc_source_data:/var/lib/postgresql/data
+  sql-client:
+    command:
+    - bash
+    - -c
+    - "echo 'Waiting for all services to be ready...'\nsleep 45\n\necho '========================================='\n\
+      echo '\U0001F680 国网电力监控系统 - Fluss架构 Ready!'\necho '========================================='\n\
+      echo 'SQL Client is ready. You can now connect and execute SQL files.'\necho\
+      \ 'Available SQL files:'\necho '  1. /opt/sql/1_cdc_source_to_fluss.sql'\necho\
+      \ '  2. /opt/sql/2_fluss_dwd_layer.sql'  \necho '  3. /opt/sql/3_fluss_dws_layer.sql'\n\
+      echo '  4. /opt/sql/4_fluss_ads_layer.sql'\necho '  5. /opt/sql/5_sink_to_postgres.sql'\n\
+      echo ''\necho 'To connect: docker exec -it sql-client-sgcc ./sql-client'\necho\
+      \ 'To run validation: ./scripts/sgcc_validation_test.sh'\necho '========================================='\n\
+      echo 'Services Status:'\necho '  - PostgreSQL Source: postgres-sgcc-source:5442'\n\
+      echo '  - PostgreSQL Sink: postgres-sgcc-sink:5443'\necho '  - Fluss Coordinator:\
+      \ coordinator-server:9123'\necho '  - Flink JobManager: jobmanager:8091'\necho\
+      \ '  - ZooKeeper: zookeeper:2181'\necho '========================================='\n\
+      echo 'Fluss with Paimon Datalake is ready!'\necho 'Paimon warehouse: /tmp/paimon'\n\
+      echo '========================================='\n\ntail -f /dev/null\n"
+    container_name: sql-client-sgcc
+    depends_on:
+      jobmanager:
+        condition: service_healthy
+      tablet-server:
+        condition: service_started
+    environment:
+    - 'FLINK_PROPERTIES=
+
+      jobmanager.rpc.address: jobmanager
+
+      rest.address: jobmanager
+
+      rest.port: 8081
+
+      '
+    hostname: sql-client
+    image: fluss/quickstart-flink:1.20-0.7.0
+    networks:
+    - fluss-sgcc-network
+    volumes:
+    - shared-tmpfs:/tmp/paimon
+    - ./fluss/sql:/opt/sql
+    - ./fluss_all_chain.sql:/opt/sql/fluss_all_chain.sql
+    - ./verify_sgcc_system.sql:/opt/sql/verify_sgcc_system.sql
+    - ./fluss/jars/postgresql-42.7.7.jar:/opt/flink/lib/postgresql-42.7.7.jar
+    - ./fluss/jars/flink-sql-connector-postgres-cdc-3.1.1.jar:/opt/flink/lib/flink-sql-connector-postgres-cdc-3.1.1.jar
+    - ./fluss/jars/flink-connector-jdbc-core-3.3.0-1.20.jar:/opt/flink/lib/flink-connector-jdbc-core-3.3.0-1.20.jar
+    - ./fluss/jars/flink-connector-jdbc-3.3.0-1.20.jar:/opt/flink/lib/flink-connector-jdbc-3.3.0-1.20.jar
+  tablet-server:
+    command: tabletServer
+    container_name: tablet-server-sgcc
+    depends_on:
+      coordinator-server:
+        condition: service_started
+    environment:
+    - 'FLUSS_PROPERTIES=
+
+      zookeeper.address: zookeeper:2181
+
+      bind.listeners: FLUSS://tablet-server:9123
+
+      data.dir: /tmp/fluss/data
+
+      remote.data.dir: /tmp/fluss/remote-data
+
+      kv.snapshot.interval: 0s
+
+      datalake.format: paimon
+
+      datalake.paimon.metastore: filesystem
+
+      datalake.paimon.warehouse: /tmp/paimon
+
+      '
+    hostname: tablet-server
+    image: fluss/fluss:0.7.0
+    networks:
+    - fluss-sgcc-network
+    ports:
+    - 9124:9123
+    restart: unless-stopped
+    volumes:
+    - shared-tmpfs:/tmp/paimon
+    - fluss_tablet_data:/tmp/fluss
+  taskmanager-1:
+    command: taskmanager
+    container_name: taskmanager-sgcc-1
+    depends_on:
+      jobmanager:
+        condition: service_healthy
+    environment:
+    - 'FLINK_PROPERTIES=
+
+      jobmanager.rpc.address: jobmanager
+
+      taskmanager.numberOfTaskSlots: 10
+
+      taskmanager.memory.process.size: 2048m
+
+      taskmanager.memory.framework.off-heap.size: 256m
+
+      parallelism.default: 2
+
+      '
+    hostname: taskmanager-1
+    image: fluss/quickstart-flink:1.20-0.7.0
+    networks:
+    - fluss-sgcc-network
+    volumes:
+    - shared-tmpfs:/tmp/paimon
+    - flink_checkpoints:/tmp/flink-checkpoints
+    - flink_savepoints:/tmp/flink-savepoints
+    - ./fluss/jars/postgresql-42.7.7.jar:/opt/flink/lib/postgresql-42.7.7.jar
+    - ./fluss/jars/flink-sql-connector-postgres-cdc-3.1.1.jar:/opt/flink/lib/flink-sql-connector-postgres-cdc-3.1.1.jar
+    - ./fluss/jars/flink-connector-jdbc-core-3.3.0-1.20.jar:/opt/flink/lib/flink-connector-jdbc-core-3.3.0-1.20.jar
+    - ./fluss/jars/flink-connector-jdbc-3.3.0-1.20.jar:/opt/flink/lib/flink-connector-jdbc-3.3.0-1.20.jar
+  taskmanager-2:
+    command: taskmanager
+    container_name: taskmanager-sgcc-2
+    depends_on:
+      jobmanager:
+        condition: service_healthy
+    environment:
+    - 'FLINK_PROPERTIES=
+
+      jobmanager.rpc.address: jobmanager
+
+      taskmanager.numberOfTaskSlots: 10
+
+      taskmanager.memory.process.size: 2048m
+
+      taskmanager.memory.framework.off-heap.size: 256m
+
+      parallelism.default: 2
+
+      '
+    hostname: taskmanager-2
+    image: fluss/quickstart-flink:1.20-0.7.0
+    networks:
+    - fluss-sgcc-network
+    volumes:
+    - shared-tmpfs:/tmp/paimon
+    - flink_checkpoints:/tmp/flink-checkpoints
+    - flink_savepoints:/tmp/flink-savepoints
+    - ./fluss/jars/postgresql-42.7.7.jar:/opt/flink/lib/postgresql-42.7.7.jar
+    - ./fluss/jars/flink-sql-connector-postgres-cdc-3.1.1.jar:/opt/flink/lib/flink-sql-connector-postgres-cdc-3.1.1.jar
+    - ./fluss/jars/flink-connector-jdbc-core-3.3.0-1.20.jar:/opt/flink/lib/flink-connector-jdbc-core-3.3.0-1.20.jar
+    - ./fluss/jars/flink-connector-jdbc-3.3.0-1.20.jar:/opt/flink/lib/flink-connector-jdbc-3.3.0-1.20.jar
+  zookeeper:
+    container_name: zookeeper-sgcc
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=0.0.0.0:2888:3888;2181
+    healthcheck:
+      interval: 10s
+      retries: 5
+      test:
+      - CMD
+      - echo
+      - ruok
+      - '|'
+      - nc
+      - localhost
+      - '2181'
+      timeout: 5s
+    hostname: zookeeper
+    image: zookeeper:3.9.2
+    networks:
+    - fluss-sgcc-network
+    ports:
+    - 2181:2181
+    restart: always
+volumes:
+  flink_checkpoints:
+    name: flink_checkpoints
+  flink_savepoints:
+    name: flink_savepoints
+  fluss_coordinator_data:
+    name: fluss_coordinator_data
+  fluss_tablet_data:
+    name: fluss_tablet_data
+  grafana-storage:
+    name: grafana-storage
+  postgres_sgcc_sink_data:
+    name: postgres_sgcc_sink_data
+  postgres_sgcc_source_data:
+    name: postgres_sgcc_source_data
+  shared-tmpfs:
+    driver: local
+    driver_opts:
+      device: tmpfs
+      type: tmpfs
