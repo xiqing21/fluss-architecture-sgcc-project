@@ -3955,120 +3955,24 @@ class DataManager:
         cursor.fetchall()
     
     def dashboard_data_generator(self):
-        """大屏数据生成器 - 主菜单"""
-        print("\n📊 大屏数据生成器")
+        """大屏数据生成器 - 遵循Fluss架构流程"""
+        print("\n📊 大屏数据生成器 (遵循Fluss架构)")
         print("="*60)
-        print("为Grafana大屏提供测试数据，支持两种模式:")
-        print("1. 直接操作模式: 直接在Sink端ADS表进行CRUD操作，快速测试大屏显示效果")
-        print("2. 架构模式: 通过Fluss架构在Source端生成数据并传播到Sink端")
-        print("="*60)
-        
-        while True:
-            print("\n🎯 请选择大屏数据生成模式:")
-            print("1. 📈 直接操作大屏数据 - 快速测试大屏显示效果")
-            print("2. 🏗️  架构化数据生成 - 遵循Fluss数仓架构")
-            print("3. 📊 查看当前数据状态")
-            print("0. 返回主菜单")
-            
-            choice = input("\n请选择模式: ").strip()
-            
-            if choice == '1':
-                self._direct_dashboard_operations()
-            elif choice == '2':
-                self._fluss_architecture_generator()
-            elif choice == '3':
-                self._show_dashboard_data_status()
-            elif choice == '0':
-                break
-            else:
-                print("❌ 无效选择，请重试")
-    
-    def _direct_dashboard_operations(self):
-        """直接操作大屏Sink端ADS表 - 快速测试模式"""
-        print("\n📈 直接操作大屏数据模式")
-        print("="*50)
-        print("此模式直接在Sink端ADS表进行CRUD操作，用于快速测试大屏数据丰富度")
-        print("⚠️  注意: 此模式绕过Fluss架构，仅用于测试目的")
-        print("="*50)
-        
-        while True:
-            print("\n🛠️  选择操作类型:")
-            print("1. 🚀 快速生成测试数据 - 生成基础大屏数据")
-            print("2. 📊 生成丰富历史数据 - 生成多样化历史数据")
-            print("3. ⚡ 实时数据模拟 - 持续更新实时数据")
-            print("4. 🗑️  清空大屏数据 - 清空所有ADS表数据")
-            print("5. 🔧 修复数据问题 - 修复主键冲突等问题")
-            print("0. 返回上级菜单")
-            
-            choice = input("\n请选择操作: ").strip()
-            
-            if choice == '1':
-                self._generate_basic_dashboard_data_fixed()
-            elif choice == '2':
-                self._generate_rich_dashboard_data_fixed()
-            elif choice == '3':
-                self._generate_realtime_dashboard_data_fixed()
-            elif choice == '4':
-                self._clear_dashboard_data()
-            elif choice == '5':
-                self._fix_dashboard_data_issues()
-            elif choice == '0':
-                break
-            else:
-                print("❌ 无效选择，请重试")
-    
-    def _fluss_architecture_generator(self):
-        """通过Fluss架构生成大屏数据"""
-        print("\n🏗️  Fluss架构数据生成模式")
-        print("="*50)
-        print("此模式在Source端生成数据，通过Fluss数仓架构传播到Sink端ADS表")
+        print("此功能将在Source端生成数据，通过Fluss数仓架构传播到Sink端ADS表")
         print("确保数据流的完整性和一致性")
-        print("="*50)
+        print("="*60)
+        
+        print("\n🔍 步骤1: 检查当前数据状态")
         
         try:
             # 检查Source和Sink端数据状态
             source_stats = self._get_source_stats()
             sink_stats = self._get_sink_stats()
             
-            print(f"\n📊 当前数据状态:")
-            print(f"   Source端总记录数: {source_stats}")
-            print(f"   Sink端总记录数: {sink_stats}")
+            print(f"\nSource端总记录数: {source_stats}")
+            print(f"Sink端总记录数: {sink_stats}")
             
-            while True:
-                print("\n🎯 选择数据生成模式:")
-                print("1. 🔧 基础数据生成 - 生成基础业务数据 (推荐)")
-                print("2. 📚 批量历史数据 - 生成大量历史数据")
-                print("3. 🔄 实时数据流 - 持续生成实时数据")
-                print("4. 🎭 场景化数据 - 生成特定业务场景数据")
-                print("5. 🔍 数据传播检查 - 检查数据是否正确传播到ADS表")
-                print("0. 返回上级菜单")
-                
-                choice = input("\n请选择生成模式: ").strip()
-                
-                if choice == '1':
-                    self._generate_basic_source_data()
-                elif choice == '2':
-                    self._generate_batch_historical_data()
-                elif choice == '3':
-                    self._generate_realtime_source_data()
-                elif choice == '4':
-                    self._generate_scenario_data()
-                elif choice == '5':
-                    self._check_data_propagation()
-                elif choice == '0':
-                    break
-                else:
-                    print("❌ 无效选择，请重试")
-                    
-        except Exception as e:
-            print(f"❌ 检查数据状态失败: {e}")
-    
-    def _show_dashboard_data_status(self):
-        """显示当前大屏数据状态"""
-        print("\n📊 当前大屏数据状态")
-        print("="*50)
-        
-        try:
+            # 检查ADS表数据
             with self.get_sink_connection() as conn:
                 with conn.cursor() as cursor:
                     ads_tables = {
@@ -4081,48 +3985,56 @@ class DataManager:
                         'ads_energy_efficiency': '能效分析'
                     }
                     
-                    print("\n📈 ADS表数据统计:")
+                    print("\n当前ADS表数据状态:")
                     total_ads_records = 0
                     for table, desc in ads_tables.items():
                         try:
                             cursor.execute(f"SELECT COUNT(*) FROM {table}")
                             count = cursor.fetchone()[0]
                             total_ads_records += count
-                            status = "✅" if count > 0 else "❌"
-                            print(f"   {status} {desc}: {count} 条记录")
+                            print(f"   📊 {desc}: {count} 条记录")
                         except Exception as e:
                             print(f"   ❌ {desc}: 查询失败 ({e})")
                     
-                    print(f"\n📊 ADS表总计: {total_ads_records} 条记录")
+                    print(f"\nADS表总计: {total_ads_records} 条记录")
                     
                     if total_ads_records == 0:
                         print("\n⚠️  检测到ADS表无数据，这可能是导致Grafana大屏无显示的原因")
-                        print("💡 建议: 使用'直接操作大屏数据'模式快速生成测试数据")
+                        print("💡 建议: 先生成基础数据，等待数据传播到ADS表后再查看大屏")
+                    
+                    print("\n🎯 选择数据生成模式:")
+                    print("1. 基础数据生成 - 生成基础业务数据 (推荐)")
+                    print("2. 批量历史数据 - 生成大量历史数据")
+                    print("3. 实时数据流 - 持续生成实时数据")
+                    print("4. 场景化数据 - 生成特定业务场景数据")
+                    print("5. 数据传播检查 - 检查数据是否正确传播到ADS表")
+                    print("0. 返回主菜单")
+                    
+                    choice = input("\n请选择生成模式: ").strip()
+                    
+                    if choice == '1':
+                        self._generate_basic_source_data()
+                    elif choice == '2':
+                        self._generate_batch_historical_data()
+                    elif choice == '3':
+                        self._generate_realtime_source_data()
+                    elif choice == '4':
+                        self._generate_scenario_data()
+                    elif choice == '5':
+                        self._check_data_propagation()
+                    elif choice == '0':
+                        return
                     else:
-                        print("\n✅ ADS表有数据，Grafana大屏应该能正常显示")
-                        
-                    # 检查ads_realtime_dashboard表的详细信息
-                    print("\n🔍 ads_realtime_dashboard表详细信息:")
-                    try:
-                        cursor.execute("SELECT metric_name, metric_value, unit, last_update_time FROM ads_realtime_dashboard ORDER BY last_update_time DESC LIMIT 5")
-                        rows = cursor.fetchall()
-                        if rows:
-                            for row in rows:
-                                print(f"   📊 {row[0]}: {row[1]} {row[2]} (更新时间: {row[3]})")
-                        else:
-                            print("   📊 表中无数据")
-                    except Exception as e:
-                        print(f"   ❌ 查询详细信息失败: {e}")
+                        print("❌ 无效选择，请重试")
                         
         except Exception as e:
-            print(f"❌ 查询数据状态失败: {e}")
-        
-        input("\n按回车键继续...")
+            print(f"❌ 检查数据状态失败: {e}")
     
     
     def _generate_basic_source_data(self):
         """在Source端生成基础数据，遵循Fluss架构"""
-        print("\n🚀 在Source端生成基础数据...")
+        print("
+🚀 在Source端生成基础数据...")
         print("此操作将在Source端生成数据，通过Fluss架构传播到Sink端ADS表")
         
         try:
@@ -4132,7 +4044,8 @@ class DataManager:
             
             with self.get_source_connection() as conn:
                 with conn.cursor() as cursor:
-                    print(f"\n👥 创建 {customer_count} 个测试客户...")
+                    print(f"
+👥 创建 {customer_count} 个测试客户...")
                     
                     # 清理并创建客户数据
                     cursor.execute("DELETE FROM customer_info WHERE customer_id LIKE 'DASH_%'")
@@ -4145,15 +4058,16 @@ class DataManager:
                         
                         cursor.execute("""
                             INSERT INTO customer_info (customer_id, customer_name, customer_type, 
-                                                     contact_person, contact_phone, address)
-                            VALUES (%s, %s, %s, %s, %s, %s)
+                                                     contact_person, phone, address, registration_date)
+                            VALUES (%s, %s, %s, %s, %s, %s, CURRENT_DATE)
                             ON CONFLICT (customer_id) DO UPDATE SET
                             customer_name = EXCLUDED.customer_name,
                             customer_type = EXCLUDED.customer_type
                         """, (customer_id, customer_name, customer_type, 
                               f"联系人{i+1}", f"138{i+1:04d}0000", f"测试地址{i+1}号"))
                     
-                    print(f"\n🔧 创建 {equipment_count} 个测试设备...")
+                    print(f"
+🔧 创建 {equipment_count} 个测试设备...")
                     
                     # 清理并创建设备数据
                     cursor.execute("DELETE FROM equipment_info WHERE equipment_id LIKE 'DASH_%'")
@@ -4166,15 +4080,15 @@ class DataManager:
                         
                         cursor.execute("""
                             INSERT INTO equipment_info (equipment_id, equipment_name, equipment_type,
-                                                       location, voltage_level, capacity, manufacturer, status)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, 'ACTIVE')
+                                                       location, installation_date, status)
+                            VALUES (%s, %s, %s, %s, CURRENT_DATE, 'ACTIVE')
                             ON CONFLICT (equipment_id) DO UPDATE SET
                             equipment_name = EXCLUDED.equipment_name,
                             equipment_type = EXCLUDED.equipment_type
-                        """, (equipment_id, equipment_name, equipment_type, f"测试位置{i+1}", 
-                              380, 100.0, "测试厂商"))
+                        """, (equipment_id, equipment_name, equipment_type, f"测试位置{i+1}"))
                     
-                    print("\n⚡ 生成电力消耗数据...")
+                    print("
+⚡ 生成电力消耗数据...")
                     
                     # 生成电力消耗数据
                     import random
@@ -4195,24 +4109,20 @@ class DataManager:
                         cursor.execute("""
                             INSERT INTO power_consumption 
                             (customer_id, equipment_id, record_time, active_power, reactive_power,
-                             voltage_a, voltage_b, voltage_c, current_a, current_b, current_c, 
-                             power_factor, frequency)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                             voltage, current_value, power_factor, frequency)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """, (
                             customer_id, equipment_id, record_time,
                             random.uniform(50, 200),    # active_power
                             random.uniform(10, 50),     # reactive_power
-                            random.uniform(220, 240),   # voltage_a
-                            random.uniform(220, 240),   # voltage_b
-                            random.uniform(220, 240),   # voltage_c
-                            random.uniform(10, 100),    # current_a
-                            random.uniform(10, 100),    # current_b
-                            random.uniform(10, 100),    # current_c
+                            random.uniform(220, 240),   # voltage
+                            random.uniform(10, 100),    # current_value
                             random.uniform(0.8, 0.95),  # power_factor
                             random.uniform(49.8, 50.2)  # frequency
                         ))
                     
-                    print("\n🚨 生成告警数据...")
+                    print("
+🚨 生成告警数据...")
                     
                     # 生成告警数据
                     alert_types = ['POWER_OUTAGE', 'VOLTAGE_ABNORMAL', 'EQUIPMENT_FAULT', 'OVERLOAD']
@@ -4228,26 +4138,27 @@ class DataManager:
                         
                         cursor.execute("""
                             INSERT INTO alert_records
-                            (equipment_id, alert_type, alert_level, alert_title, alert_description, alert_time, status)
-                            VALUES (%s, %s, %s, %s, %s, %s, 'OPEN')
+                            (equipment_id, alert_type, alert_level, alert_message, alert_time, status)
+                            VALUES (%s, %s, %s, %s, %s, 'ACTIVE')
                         """, (
                             equipment_id,
                             random.choice(alert_types),
                             random.choice(alert_levels),
                             f"大屏测试告警{i+1}",
-                            f"这是大屏测试告警{i+1}的详细描述",
                             alert_time
                         ))
                     
                     conn.commit()
                     
-                    print("\n✅ Source端数据生成完成!")
+                    print("
+✅ Source端数据生成完成!")
                     print(f"   - 客户数据: {customer_count} 条")
                     print(f"   - 设备数据: {equipment_count} 条")
                     print(f"   - 电力数据: 100 条")
                     print(f"   - 告警数据: 20 条")
                     
-                    print("\n⏳ 等待数据传播到Sink端ADS表...")
+                    print("
+⏳ 等待数据传播到Sink端ADS表...")
                     print("💡 提示: 数据传播需要一些时间，请稍后查看Grafana大屏")
                     
         except Exception as e:
@@ -4255,7 +4166,8 @@ class DataManager:
     
     def _generate_batch_historical_data(self):
         """生成批量历史数据"""
-        print("\n📊 生成批量历史数据...")
+        print("
+📊 生成批量历史数据...")
         
         try:
             days = int(input("请输入要生成的历史天数 (1-7，推荐3): ").strip() or "3")
@@ -4268,7 +4180,8 @@ class DataManager:
                 print("❌ 每天记录数必须在50-500之间")
                 return
             
-            print(f"\n🚀 开始生成过去 {days} 天的历史数据，每天 {records_per_day} 条记录...")
+            print(f"
+🚀 开始生成过去 {days} 天的历史数据，每天 {records_per_day} 条记录...")
             
             # 调用现有的批量生成方法
             duration_minutes = days * 24 * 60  # 转换为分钟
@@ -4289,7 +4202,8 @@ class DataManager:
     
     def _generate_realtime_source_data(self):
         """生成实时Source端数据"""
-        print("\n🔄 启动实时数据生成...")
+        print("
+🔄 启动实时数据生成...")
         print("此功能将持续在Source端生成数据，按Ctrl+C停止")
         
         try:
@@ -4303,7 +4217,8 @@ class DataManager:
                 print("❌ 每批记录数必须在1-10之间")
                 return
             
-            print(f"\n⏰ 开始每 {interval} 秒生成 {records_per_batch} 条记录...")
+            print(f"
+⏰ 开始每 {interval} 秒生成 {records_per_batch} 条记录...")
             
             # 调用现有的实时生成方法
             self._start_realtime_generation(
@@ -4316,13 +4231,16 @@ class DataManager:
         except ValueError:
             print("❌ 请输入有效的数字")
         except KeyboardInterrupt:
-            print("\n\n⏹️ 实时数据生成已停止")
+            print("
+
+⏹️ 实时数据生成已停止")
         except Exception as e:
             print(f"❌ 实时数据生成失败: {e}")
     
     def _generate_scenario_data(self):
         """生成场景化数据"""
-        print("\n🎭 场景化数据生成")
+        print("
+🎭 场景化数据生成")
         print("选择要模拟的业务场景:")
         print("1. 正常运行场景 - 系统稳定运行")
         print("2. 高负载场景 - 用电高峰期")
@@ -4330,7 +4248,8 @@ class DataManager:
         print("4. 维护场景 - 设备维护期间")
         print("0. 返回")
         
-        choice = input("\n请选择场景: ").strip()
+        choice = input("
+请选择场景: ").strip()
         
         if choice == '1':
             self._generate_normal_scenario()
@@ -4347,18 +4266,21 @@ class DataManager:
     
     def _check_data_propagation(self):
         """检查数据传播状态"""
-        print("\n🔍 检查数据传播状态...")
+        print("
+🔍 检查数据传播状态...")
         
         try:
             # 检查Source端数据
             source_stats = self._get_detailed_source_stats()
-            print("\nSource端数据统计:")
+            print("
+Source端数据统计:")
             for table, count in source_stats.items():
                 print(f"   📊 {table}: {count} 条记录")
             
             # 检查Sink端数据
             sink_stats = self._get_detailed_sink_stats()
-            print("\nSink端ADS表统计:")
+            print("
+Sink端ADS表统计:")
             for table, count in sink_stats.items():
                 print(f"   📊 {table}: {count} 条记录")
             
@@ -4366,7 +4288,8 @@ class DataManager:
             source_total = sum(source_stats.values())
             sink_total = sum(sink_stats.values())
             
-            print(f"\n📈 数据传播分析:")
+            print(f"
+📈 数据传播分析:")
             print(f"   Source端总计: {source_total} 条")
             print(f"   Sink端总计: {sink_total} 条")
             
@@ -4389,7 +4312,8 @@ class DataManager:
             # 检查数据新鲜度
             freshness = self._check_data_freshness()
             if freshness:
-                print("\n🕒 数据新鲜度:")
+                print("
+🕒 数据新鲜度:")
                 for table, info in freshness.items():
                     status = "🟢 新鲜" if info['fresh'] else "🔴 过期"
                     print(f"   {table}: {info['latest']} ({status})")
@@ -4461,10 +4385,9 @@ class DataManager:
         except Exception as e:
             print(f"❌ 检查ADS表状态失败: {e}")
     
-    def _generate_basic_dashboard_data_fixed(self):
-        """生成基础大屏测试数据 - 修复版"""
-        print("\n🚀 开始生成基础大屏测试数据 (修复版)...")
-        print("此操作将直接在Sink端ADS表生成测试数据，用于快速验证大屏显示")
+    def _generate_basic_dashboard_data(self):
+        """生成基础大屏测试数据"""
+        print("\n🚀 开始生成基础大屏测试数据...")
         
         try:
             with self.get_sink_connection() as conn:
@@ -4472,33 +4395,27 @@ class DataManager:
                     current_time = datetime.datetime.now()
                     
                     print("\n📊 生成实时监控大屏数据...")
-                    # 1. 生成实时监控大屏数据 - 修复主键冲突问题
+                    # 1. 生成实时监控大屏数据
                     dashboard_metrics = [
                         ('total_active_power', 1250.5, 'MW', '系统总有功功率', 'POWER'),
                         ('avg_equipment_health', 85.2, '分', '设备平均健康度', 'EQUIPMENT'),
                         ('total_alerts_today', 23, '个', '今日告警总数', 'ALERT'),
                         ('active_customers', 156, '户', '活跃客户数量', 'CUSTOMER'),
-                        ('power_factor_avg', 0.92, '', '平均功率因数', 'POWER'),
-                        ('voltage_stability', 98.5, '%', '电压稳定性', 'POWER'),
-                        ('equipment_online_rate', 94.8, '%', '设备在线率', 'EQUIPMENT'),
-                        ('energy_efficiency', 87.3, '%', '能效指标', 'EFFICIENCY'),
-                        ('load_balance_index', 0.85, '', '负载均衡指数', 'POWER'),
-                        ('maintenance_alerts', 5, '个', '维护告警数', 'ALERT'),
                         ('system_efficiency', 92.8, '%', '系统运行效率', 'POWER'),
                         ('critical_alerts', 3, '个', '严重告警数量', 'ALERT')
                     ]
                     
-                    # 先清空ads_realtime_dashboard表避免主键冲突
-                    cursor.execute("DELETE FROM ads_realtime_dashboard WHERE metric_category IN ('POWER', 'EQUIPMENT', 'ALERT', 'CUSTOMER', 'EFFICIENCY')")
-                    
                     for metric_name, value, unit, desc, category in dashboard_metrics:
                         cursor.execute("""
                             INSERT INTO ads_realtime_dashboard 
-                            (metric_name, metric_value, metric_unit, metric_desc, metric_category, last_update_time)
+                            (metric_name, metric_value, metric_unit, metric_desc, metric_category, update_time)
                             VALUES (%s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (metric_name) DO UPDATE SET
+                            metric_value = EXCLUDED.metric_value,
+                            update_time = EXCLUDED.update_time
                         """, (metric_name, value, unit, desc, category, current_time))
                     
-                    print(f"   ✅ 已生成 {len(dashboard_metrics)} 条实时监控指标")
+                    print("   ✅ 已生成 6 条实时监控指标")
                     
                     print("\n🔧 生成设备健康度数据...")
                     # 2. 生成设备健康度数据
@@ -4616,18 +4533,15 @@ class DataManager:
                     print("\n🎉 基础大屏测试数据生成完成!")
                     print("="*60)
                     print("📊 数据生成汇总:")
-                    print(f"   - 实时监控指标: {len(dashboard_metrics)} 条")
-                    print(f"   - 设备健康度: {len(equipment_data)} 条")
-                    print(f"   - 客户行为分析: {len(customer_data)} 条")
+                    print("   - 实时监控指标: 6 条")
+                    print("   - 设备健康度: 5 条")
+                    print("   - 客户行为分析: 4 条")
                     print("   - 告警统计: 1 条")
-                    print(f"   - 电力质量: {len(quality_data)} 条")
+                    print("   - 电力质量: 3 条")
                     print("   - 风险评估: 1 条")
-                    print(f"   - 能效分析: {len(efficiency_data)} 条")
-                    total_count = len(dashboard_metrics) + len(equipment_data) + len(customer_data) + 1 + len(quality_data) + 1 + len(efficiency_data)
-                    print(f"   总计: {total_count} 条记录")
+                    print("   - 能效分析: 3 条")
+                    print("   总计: 23 条记录")
                     print("\n💡 现在可以刷新Grafana大屏查看数据显示效果")
-                    print("\n⚠️  注意: ads_realtime_dashboard表是专门为大屏创建的，与其他Fluss架构表独立")
-                    print("   如需测试完整的Fluss数据流，请使用'架构化数据生成'模式")
                     
         except Exception as e:
             print(f"❌ 生成基础大屏数据失败: {e}")

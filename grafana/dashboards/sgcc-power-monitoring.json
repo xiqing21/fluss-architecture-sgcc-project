@@ -23,10 +23,500 @@
   "liveNow": true,
   "panels": [
     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 20,
+      "panels": [],
+      "title": "CRUD操作实时监控",
+      "type": "row"
+    },
+    {
       "datasource": {
         "type": "postgres",
         "uid": "SGCC_PostgreSQL"
       },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "vis": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "id": 21,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "SGCC_PostgreSQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  DATE_TRUNC('minute', update_time) AS time,\n  COUNT(*) as \"数据更新频率\"\nFROM ads_realtime_dashboard\nWHERE update_time >= NOW() - INTERVAL '1 hour'\nGROUP BY DATE_TRUNC('minute', update_time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "实时数据更新频率",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "SGCC_PostgreSQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              },
+              {
+                "color": "red",
+                "value": 5000
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "id": 22,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "SGCC_PostgreSQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  'ads_realtime_dashboard' as table_name,\n  COUNT(*) as record_count\nFROM ads_realtime_dashboard\nUNION ALL\nSELECT\n  'ads_equipment_health' as table_name,\n  COUNT(*) as record_count\nFROM ads_equipment_health\nUNION ALL\nSELECT\n  'ads_power_quality' as table_name,\n  COUNT(*) as record_count\nFROM ads_power_quality\nUNION ALL\nSELECT\n  'ads_alert_statistics' as table_name,\n  COUNT(*) as record_count\nFROM ads_alert_statistics",
+          "refId": "A"
+        }
+      ],
+      "title": "各ADS表记录总数",
+       "type": "bargauge"
+     },
+     {
+       "datasource": {
+         "type": "postgres",
+         "uid": "SGCC_PostgreSQL"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "drawStyle": "line",
+             "fillOpacity": 10,
+             "gradientMode": "none",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "vis": false
+             },
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "auto",
+             "spanNulls": false,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green",
+                 "value": null
+               },
+               {
+                 "color": "red",
+                 "value": 300
+               }
+             ]
+           },
+           "unit": "s"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 8,
+         "w": 8,
+         "x": 0,
+         "y": 10
+       },
+       "id": 23,
+       "options": {
+         "legend": {
+           "calcs": [],
+           "displayMode": "list",
+           "placement": "bottom"
+         },
+         "tooltip": {
+           "mode": "single",
+           "sort": "none"
+         }
+       },
+       "targets": [
+         {
+           "datasource": {
+             "type": "postgres",
+             "uid": "SGCC_PostgreSQL"
+           },
+           "format": "time_series",
+           "group": [],
+           "metricColumn": "none",
+           "rawQuery": true,
+           "rawSql": "SELECT\n  NOW() AS time,\n  EXTRACT(EPOCH FROM (NOW() - MAX(update_time))) as \"实时监控表数据延迟(秒)\"\nFROM ads_realtime_dashboard\nUNION ALL\nSELECT\n  NOW() AS time,\n  EXTRACT(EPOCH FROM (NOW() - MAX(update_time))) as \"设备健康表数据延迟(秒)\"\nFROM ads_equipment_health\nUNION ALL\nSELECT\n  NOW() AS time,\n  EXTRACT(EPOCH FROM (NOW() - MAX(update_time))) as \"电力质量表数据延迟(秒)\"\nFROM ads_power_quality",
+           "refId": "A",
+           "select": [
+             [
+               {
+                 "params": [
+                   "value"
+                 ],
+                 "type": "column"
+               }
+             ]
+           ],
+           "timeColumn": "time",
+           "where": [
+             {
+               "name": "$__timeFilter",
+               "params": [],
+               "type": "macro"
+             }
+           ]
+         }
+       ],
+       "title": "数据新鲜度监控",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "postgres",
+         "uid": "SGCC_PostgreSQL"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "drawStyle": "line",
+             "fillOpacity": 10,
+             "gradientMode": "none",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "vis": false
+             },
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "auto",
+             "spanNulls": false,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green",
+                 "value": null
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 8,
+         "w": 8,
+         "x": 8,
+         "y": 10
+       },
+       "id": 24,
+       "options": {
+         "legend": {
+           "calcs": [],
+           "displayMode": "list",
+           "placement": "bottom"
+         },
+         "tooltip": {
+           "mode": "single",
+           "sort": "none"
+         }
+       },
+       "targets": [
+         {
+           "datasource": {
+             "type": "postgres",
+             "uid": "SGCC_PostgreSQL"
+           },
+           "format": "time_series",
+           "group": [],
+           "metricColumn": "none",
+           "rawQuery": true,
+           "rawSql": "SELECT\n  DATE_TRUNC('minute', update_time) AS time,\n  COUNT(CASE WHEN create_time = update_time THEN 1 END) as \"新增记录\",\n  COUNT(CASE WHEN create_time != update_time THEN 1 END) as \"更新记录\"\nFROM ads_realtime_dashboard\nWHERE update_time >= NOW() - INTERVAL '1 hour'\nGROUP BY DATE_TRUNC('minute', update_time)\nORDER BY time",
+           "refId": "A",
+           "select": [
+             [
+               {
+                 "params": [
+                   "value"
+                 ],
+                 "type": "column"
+               }
+             ]
+           ],
+           "timeColumn": "time",
+           "where": [
+             {
+               "name": "$__timeFilter",
+               "params": [],
+               "type": "macro"
+             }
+           ]
+         }
+       ],
+       "title": "CRUD操作趋势",
+       "type": "timeseries"
+     },
+     {
+       "datasource": {
+         "type": "postgres",
+         "uid": "SGCC_PostgreSQL"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "thresholds"
+           },
+           "mappings": [
+             {
+               "options": {
+                 "0": {
+                   "color": "red",
+                   "index": 0,
+                   "text": "异常"
+                 },
+                 "1": {
+                   "color": "green",
+                   "index": 1,
+                   "text": "正常"
+                 }
+               },
+               "type": "value"
+             }
+           ],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "red",
+                 "value": null
+               },
+               {
+                 "color": "green",
+                 "value": 1
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 8,
+         "w": 8,
+         "x": 16,
+         "y": 10
+       },
+       "id": 25,
+       "options": {
+         "colorMode": "background",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "reduceOptions": {
+           "values": false,
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": ""
+         },
+         "textMode": "auto"
+       },
+       "pluginVersion": "10.2.0",
+       "targets": [
+         {
+           "datasource": {
+             "type": "postgres",
+             "uid": "SGCC_PostgreSQL"
+           },
+           "format": "table",
+           "group": [],
+           "metricColumn": "none",
+           "rawQuery": true,
+           "rawSql": "SELECT\n  CASE \n    WHEN COUNT(*) > 0 AND MAX(update_time) > NOW() - INTERVAL '5 minutes' THEN 1\n    ELSE 0\n  END as \"数据流健康状态\"\nFROM ads_realtime_dashboard",
+           "refId": "A",
+           "select": [
+             [
+               {
+                 "params": [
+                   "value"
+                 ],
+                 "type": "column"
+               }
+             ]
+           ],
+           "timeColumn": "time",
+           "where": [
+             {
+               "name": "$__timeFilter",
+               "params": [],
+               "type": "macro"
+             }
+           ]
+         }
+       ],
+       "title": "数据流健康度",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "postgres",
+         "uid": "SGCC_PostgreSQL"
+       },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -55,11 +545,11 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 0,
-        "y": 0
-      },
+         "h": 8,
+         "w": 4,
+         "x": 0,
+         "y": 18
+       },
       "id": 1,
       "options": {
         "orientation": "auto",
@@ -126,7 +616,7 @@
         "h": 6,
         "w": 4,
         "x": 4,
-        "y": 0
+        "y": 9
       },
       "id": 2,
       "options": {
@@ -191,11 +681,11 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 8,
-        "y": 0
-      },
+          "h": 8,
+          "w": 4,
+          "x": 4,
+          "y": 18
+        },
       "id": 3,
       "options": {
         "orientation": "auto",
@@ -258,11 +748,11 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 12,
-        "y": 0
-      },
+         "h": 8,
+         "w": 4,
+         "x": 12,
+         "y": 18
+       },
       "id": 4,
       "options": {
         "colorMode": "value",
@@ -328,11 +818,11 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 16,
-        "y": 0
-      },
+         "h": 8,
+         "w": 4,
+         "x": 16,
+         "y": 18
+       },
       "id": 5,
       "options": {
         "orientation": "auto",
@@ -395,11 +885,11 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 20,
-        "y": 0
-      },
+         "h": 8,
+         "w": 4,
+         "x": 20,
+         "y": 18
+       },
       "id": 6,
       "options": {
         "colorMode": "value",
@@ -517,11 +1007,11 @@
         ]
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 6
-      },
+         "h": 8,
+         "w": 12,
+         "x": 0,
+         "y": 26
+       },
       "id": 7,
       "options": {
         "cellHeight": "sm",
@@ -574,11 +1064,11 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 12,
-        "y": 6
-      },
+         "h": 8,
+         "w": 6,
+         "x": 12,
+         "y": 26
+       },
       "id": 8,
       "options": {
         "legend": {
@@ -637,11 +1127,11 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 18,
-        "y": 6
-      },
+         "h": 8,
+         "w": 6,
+         "x": 18,
+         "y": 26
+       },
       "id": 9,
       "options": {
         "legend": {
@@ -738,11 +1228,11 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 14
-      },
+         "h": 8,
+         "w": 12,
+         "x": 0,
+         "y": 34
+       },
       "id": 10,
       "options": {
         "legend": {
@@ -831,11 +1321,11 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 14
-      },
+         "h": 8,
+         "w": 12,
+         "x": 12,
+         "y": 34
+       },
       "id": 11,
       "options": {
         "legend": {
@@ -858,7 +1348,16 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  stat_time as time,\n  SUM(CASE WHEN critical_alerts > 0 THEN alert_count ELSE 0 END) as \"严重告警\",\n  SUM(CASE WHEN alert_level = 'HIGH' THEN alert_count ELSE 0 END) as \"高级告警\",\n  SUM(CASE WHEN alert_level = 'MEDIUM' THEN alert_count ELSE 0 END) as \"中级告警\",\n  SUM(CASE WHEN alert_level = 'LOW' THEN alert_count ELSE 0 END) as \"低级告警\"\nFROM ads_alert_statistics \nWHERE stat_time >= NOW() - INTERVAL '24 hours'\nGROUP BY stat_time\nORDER BY stat_time",
+          "rawSql": "SELECT 
+  stat_time as time,
+  SUM(critical_alerts) as \"严重告警\",
+  SUM(error_alerts) as \"错误告警\",
+  SUM(warning_alerts) as \"警告告警\",
+  SUM(info_alerts) as \"信息告警\"
+FROM ads_alert_statistics 
+WHERE stat_time >= NOW() - INTERVAL '24 hours'
+GROUP BY stat_time
+ORDER BY stat_time",
           "refId": "A"
         }
       ],
@@ -945,11 +1444,11 @@
         ]
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 22
-      },
+         "h": 8,
+         "w": 12,
+         "x": 0,
+         "y": 42
+       },
       "id": 12,
       "options": {
         "cellHeight": "sm",
@@ -1040,11 +1539,11 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 22
-      },
+         "h": 8,
+         "w": 12,
+         "x": 12,
+         "y": 42
+       },
       "id": 13,
       "options": {
         "legend": {

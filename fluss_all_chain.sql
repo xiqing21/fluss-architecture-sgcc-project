@@ -6,25 +6,34 @@
 -- 设置检查点间隔
 SET 'execution.checkpointing.interval' = '30s';
 
+-- 设置状态TTL，解决UPDATE和DELETE操作的状态管理问题
+SET 'table.exec.state.ttl' = '1h';
+
+-- 设置空闲状态保留时间
+SET 'table.exec.mini-batch.enabled' = 'true';
+SET 'table.exec.mini-batch.allow-latency' = '1s';
+SET 'table.exec.mini-batch.size' = '1000';
+
+-- 优化CDC处理性能
+SET 'table.optimizer.join-reorder-enabled' = 'true';
+SET 'table.exec.sink.upsert-materialize' = 'auto';
+
 -- 创建 Fluss Catalog
 CREATE CATALOG IF NOT EXISTS fluss_catalog WITH (
     'type' = 'fluss',
     'bootstrap.servers' = 'coordinator-server:9123'
 );
 
--- 使用 Fluss Catalog
-USE CATALOG fluss_catalog;
-
--- 创建数据库
-CREATE DATABASE IF NOT EXISTS sgcc_dw;
-USE sgcc_dw;
-
 -- ========================================
--- 第一步：创建PostgreSQL Source连接器
+-- 第一步：在default catalog创建PostgreSQL CDC源表
 -- ========================================
+
+-- 使用默认catalog（支持CDC连接器）
+USE CATALOG default_catalog;
+USE default_database;
 
 -- 1.1 创建设备信息源表
-CREATE TEMPORARY TABLE ods_equipment_info (
+CREATE TABLE IF NOT EXISTS ods_equipment_info (
     equipment_id STRING,
     equipment_name STRING,
     equipment_type STRING,
@@ -51,7 +60,7 @@ CREATE TEMPORARY TABLE ods_equipment_info (
 );
 
 -- 1.2 创建客户信息源表
-CREATE TEMPORARY TABLE ods_customer_info (
+CREATE TABLE IF NOT EXISTS ods_customer_info (
     customer_id STRING,
     customer_name STRING,
     customer_type STRING,
@@ -79,7 +88,7 @@ CREATE TEMPORARY TABLE ods_customer_info (
 );
 
 -- 1.3 创建用电数据源表
-CREATE TEMPORARY TABLE ods_power_consumption (
+CREATE TABLE IF NOT EXISTS ods_power_consumption (
     consumption_id BIGINT,
     customer_id STRING,
     equipment_id STRING,
@@ -111,7 +120,7 @@ CREATE TEMPORARY TABLE ods_power_consumption (
 );
 
 -- 1.4 创建设备状态源表
-CREATE TEMPORARY TABLE ods_equipment_status (
+CREATE TABLE IF NOT EXISTS ods_equipment_status (
     status_id BIGINT,
     equipment_id STRING,
     status_time TIMESTAMP(3),
@@ -141,7 +150,7 @@ CREATE TEMPORARY TABLE ods_equipment_status (
 );
 
 -- 1.5 创建告警记录源表
-CREATE TEMPORARY TABLE ods_alert_records (
+CREATE TABLE IF NOT EXISTS ods_alert_records (
     alert_id BIGINT,
     equipment_id STRING,
     customer_id STRING,
@@ -175,8 +184,15 @@ CREATE TEMPORARY TABLE ods_alert_records (
 );
 
 -- ========================================
--- 第二步：创建DWD层清洗和标准化表
+-- 第二步：切换到Fluss catalog创建DWD层清洗和标准化表
 -- ========================================
+
+-- 切换到Fluss catalog（支持流表存储）
+USE CATALOG fluss_catalog;
+
+-- 创建数据库
+CREATE DATABASE IF NOT EXISTS sgcc_dw;
+USE sgcc_dw;
 
 -- 2.1 DWD设备维度表
 CREATE TABLE IF NOT EXISTS dwd_dim_equipment (
@@ -382,11 +398,15 @@ CREATE TABLE IF NOT EXISTS dws_alert_hour_stats (
 );
 
 -- ========================================
--- 第四步：创建ADS层应用表（写入PostgreSQL Sink）
+-- 第四步：切换到default catalog创建ADS层JDBC sink表
 -- ========================================
 
+-- 切换回default catalog（支持JDBC连接器）
+USE CATALOG default_catalog;
+USE default_database;
+
 -- 4.1 实时监控大屏指标表
-CREATE TEMPORARY TABLE ads_realtime_dashboard (
+CREATE TABLE IF NOT EXISTS ads_realtime_dashboard (
     metric_id BIGINT,
     metric_name STRING,
     metric_value DECIMAL(15,4),
@@ -405,7 +425,7 @@ CREATE TEMPORARY TABLE ads_realtime_dashboard (
 );
 
 -- 4.2 设备健康度分析表
-CREATE TEMPORARY TABLE ads_equipment_health (
+CREATE TABLE IF NOT EXISTS ads_equipment_health (
     analysis_id BIGINT,
     equipment_id STRING,
     equipment_name STRING,
@@ -432,7 +452,7 @@ CREATE TEMPORARY TABLE ads_equipment_health (
 );
 
 -- 4.3 客户用电行为分析表
-CREATE TEMPORARY TABLE ads_customer_behavior (
+CREATE TABLE IF NOT EXISTS ads_customer_behavior (
     behavior_id BIGINT,
     customer_id STRING,
     customer_name STRING,
@@ -459,7 +479,7 @@ CREATE TEMPORARY TABLE ads_customer_behavior (
 );
 
 -- 4.4 告警统计分析表
-CREATE TEMPORARY TABLE ads_alert_statistics (
+CREATE TABLE IF NOT EXISTS ads_alert_statistics (
     stat_id BIGINT,
     stat_period STRING,
     stat_time TIMESTAMP(3),
@@ -487,7 +507,7 @@ CREATE TEMPORARY TABLE ads_alert_statistics (
 );
 
 -- 4.5 电力质量分析表
-CREATE TEMPORARY TABLE ads_power_quality (
+CREATE TABLE IF NOT EXISTS ads_power_quality (
     quality_id BIGINT,
     equipment_id STRING,
     equipment_name STRING,
@@ -517,7 +537,7 @@ CREATE TEMPORARY TABLE ads_power_quality (
 );
 
 -- 4.6 风险评估汇总表
-CREATE TEMPORARY TABLE ads_risk_assessment (
+CREATE TABLE IF NOT EXISTS ads_risk_assessment (
     assessment_id BIGINT,
     assessment_time TIMESTAMP(3),
     overall_risk_score DECIMAL(5,2),
@@ -544,7 +564,7 @@ CREATE TEMPORARY TABLE ads_risk_assessment (
 );
 
 -- 4.7 能效分析表
-CREATE TEMPORARY TABLE ads_energy_efficiency (
+CREATE TABLE IF NOT EXISTS ads_energy_efficiency (
     efficiency_id BIGINT,
     analysis_scope STRING,
     scope_id STRING,
@@ -578,6 +598,10 @@ CREATE TEMPORARY TABLE ads_energy_efficiency (
 
 -- 5.1 ODS到DWD的数据清洗和转换任务
 
+-- 切换到Fluss catalog进行DWD层数据插入
+USE CATALOG fluss_catalog;
+USE sgcc_dw;
+
 -- 设备维度表数据处理
 INSERT INTO dwd_dim_equipment
 SELECT 
@@ -607,7 +631,7 @@ SELECT
     created_at,
     updated_at,
     CURRENT_TIMESTAMP as etl_time
-FROM ods_equipment_info;
+FROM default_catalog.default_database.ods_equipment_info;
 
 -- 客户维度表数据处理
 INSERT INTO dwd_dim_customer
@@ -647,7 +671,7 @@ SELECT
     created_at,
     updated_at,
     CURRENT_TIMESTAMP as etl_time
-FROM ods_customer_info;
+FROM default_catalog.default_database.ods_customer_info;
 
 -- 用电事实表数据处理
 INSERT INTO dwd_fact_power_consumption
@@ -689,7 +713,7 @@ SELECT
     END as data_quality_score,
     created_at,
     CURRENT_TIMESTAMP as etl_time
-FROM ods_power_consumption;
+FROM default_catalog.default_database.ods_power_consumption;
 
 -- 设备状态事实表数据处理
 INSERT INTO dwd_fact_equipment_status
@@ -763,7 +787,7 @@ SELECT
     END as is_abnormal,
     created_at,
     CURRENT_TIMESTAMP as etl_time
-FROM ods_equipment_status;
+FROM default_catalog.default_database.ods_equipment_status;
 
 -- 告警事实表数据处理
 INSERT INTO dwd_fact_alert
@@ -813,7 +837,7 @@ SELECT
     created_at,
     updated_at,
     CURRENT_TIMESTAMP as etl_time
-FROM ods_alert_records;
+FROM default_catalog.default_database.ods_alert_records;
 
 -- 5.2 DWD到DWS的汇总任务
 
@@ -884,10 +908,14 @@ GROUP BY alert_date, alert_hour, equipment_id, alert_type, alert_level;
 
 -- 5.3 DWS到ADS的应用层数据生成
 
+-- 切换到default catalog进行ADS层数据插入
+USE CATALOG default_catalog;
+USE default_database;
+
 -- 实时监控大屏指标 (修改为支持持续更新)
 INSERT INTO ads_realtime_dashboard
 SELECT 
-    CAST(HASH_CODE(CONCAT('total_active_power', CAST(CURRENT_TIMESTAMP AS STRING))) AS BIGINT) as metric_id,
+    1 as metric_id,  -- 固定ID for total_active_power
     'total_active_power' as metric_name,
     COALESCE(SUM(total_active_power), 0) as metric_value,
     'MW' as metric_unit,
@@ -895,12 +923,12 @@ SELECT
     'POWER' as metric_category,
     CURRENT_TIMESTAMP as update_time,
     CURRENT_TIMESTAMP as created_at
-FROM dws_customer_hour_power
+FROM fluss_catalog.sgcc_dw.dws_customer_hour_power
 WHERE stat_date = CURRENT_DATE AND stat_hour = EXTRACT(HOUR FROM CURRENT_TIMESTAMP);
 
 INSERT INTO ads_realtime_dashboard
 SELECT 
-    CAST(HASH_CODE(CONCAT('avg_equipment_health', CAST(CURRENT_TIMESTAMP AS STRING))) AS BIGINT) as metric_id,
+    2 as metric_id,  -- 固定ID for avg_equipment_health
     'avg_equipment_health' as metric_name,
     COALESCE(AVG(avg_health_score), 0) as metric_value,
     '分' as metric_unit,
@@ -908,12 +936,12 @@ SELECT
     'EQUIPMENT' as metric_category,
     CURRENT_TIMESTAMP as update_time,
     CURRENT_TIMESTAMP as created_at
-FROM dws_equipment_hour_summary
+FROM fluss_catalog.sgcc_dw.dws_equipment_hour_summary
 WHERE stat_date = CURRENT_DATE AND stat_hour = EXTRACT(HOUR FROM CURRENT_TIMESTAMP);
 
 INSERT INTO ads_realtime_dashboard
 SELECT 
-    CAST(HASH_CODE(CONCAT('total_alerts_today', CAST(CURRENT_TIMESTAMP AS STRING))) AS BIGINT) as metric_id,
+    3 as metric_id,  -- 固定ID for total_alerts_today
     'total_alerts_today' as metric_name,
     COALESCE(SUM(total_alerts), 0) as metric_value,
     '个' as metric_unit,
@@ -921,13 +949,13 @@ SELECT
     'ALERT' as metric_category,
     CURRENT_TIMESTAMP as update_time,
     CURRENT_TIMESTAMP as created_at
-FROM dws_alert_hour_stats
+FROM fluss_catalog.sgcc_dw.dws_alert_hour_stats
 WHERE stat_date = CURRENT_DATE;
 
 -- 设备健康度分析 (修改为支持持续更新)
 INSERT INTO ads_equipment_health
 SELECT 
-    CAST(HASH_CODE(CONCAT(e.equipment_id, CAST(CURRENT_TIMESTAMP AS STRING))) AS BIGINT) as analysis_id,
+    CAST(HASH_CODE(e.equipment_id) AS BIGINT) as analysis_id,  -- 基于equipment_id的固定hash
     e.equipment_id,
     e.equipment_name,
     e.equipment_type,
@@ -958,7 +986,7 @@ SELECT
     END as recommendation,
     CURRENT_TIMESTAMP as analysis_time,
     CURRENT_TIMESTAMP as created_at
-FROM dwd_dim_equipment e
+FROM fluss_catalog.sgcc_dw.dwd_dim_equipment e
 LEFT JOIN (
     SELECT 
         equipment_id,
@@ -967,7 +995,7 @@ LEFT JOIN (
         AVG(avg_load_rate) as avg_load_rate,
         AVG(avg_efficiency) as avg_efficiency,
         CAST(SUM(abnormal_count) AS INT) as abnormal_count
-    FROM dws_equipment_hour_summary
+    FROM fluss_catalog.sgcc_dw.dws_equipment_hour_summary
     WHERE stat_date >= CURRENT_DATE - INTERVAL '7' DAY
     GROUP BY equipment_id
 ) s ON e.equipment_id = s.equipment_id
@@ -976,7 +1004,7 @@ WHERE e.is_active = true;
 -- 客户用电行为分析 (修改为支持持续更新)
 INSERT INTO ads_customer_behavior
 SELECT 
-    CAST(HASH_CODE(CONCAT(c.customer_id, CAST(CURRENT_TIMESTAMP AS STRING))) AS BIGINT) as behavior_id,
+    CAST(HASH_CODE(c.customer_id) AS BIGINT) as behavior_id,  -- 基于customer_id的固定hash
     c.customer_id,
     c.customer_name,
     c.customer_type,
@@ -1001,7 +1029,7 @@ SELECT
     COALESCE(p.total_consumption * 0.5, 0) as carbon_emission, -- 假设碳排放因子0.5kg/kWh
     CURRENT_TIMESTAMP as analysis_time,
     CURRENT_TIMESTAMP as created_at
-FROM dwd_dim_customer c
+FROM fluss_catalog.sgcc_dw.dwd_dim_customer c
 LEFT JOIN (
     SELECT 
         customer_id,
@@ -1011,7 +1039,7 @@ LEFT JOIN (
         AVG(avg_power_factor) as avg_power_factor,
         VARIANCE(total_active_power) as power_variance,
         CAST(SUM(anomaly_count) AS INT) as anomaly_count
-    FROM dws_customer_hour_power
+    FROM fluss_catalog.sgcc_dw.dws_customer_hour_power
     WHERE stat_date = CURRENT_DATE
     GROUP BY customer_id
 ) p ON c.customer_id = p.customer_id
@@ -1020,7 +1048,7 @@ WHERE c.is_active = true;
 -- 告警统计分析 (修改为支持持续更新)
 INSERT INTO ads_alert_statistics
 SELECT 
-    CAST(HASH_CODE(CAST(CURRENT_TIMESTAMP AS STRING)) AS BIGINT) as stat_id,
+    1 as stat_id,  -- 固定ID for daily stats
     'DAILY' as stat_period,
     CURRENT_TIMESTAMP as stat_time,
     CAST(COALESCE(SUM(total_alerts), 0) AS INT) as total_alerts,
@@ -1043,13 +1071,13 @@ SELECT
         ELSE 0
     END as resolution_rate,
     CURRENT_TIMESTAMP as created_at
-FROM dws_alert_hour_stats
+FROM fluss_catalog.sgcc_dw.dws_alert_hour_stats
 WHERE stat_date = CURRENT_DATE;
 
 -- 电力质量分析（基于真实数据）
 INSERT INTO ads_power_quality
 SELECT 
-    CAST(HASH_CODE(CONCAT(e.equipment_id, CAST(CURRENT_TIMESTAMP AS STRING))) AS BIGINT) as quality_id,
+    CAST(HASH_CODE(e.equipment_id) AS BIGINT) as quality_id,  -- 基于equipment_id的固定hash
     e.equipment_id,
     COALESCE(e.equipment_name, 'UNKNOWN') as equipment_name,
     COALESCE(ec.customer_id, 'UNKNOWN') as customer_id,
@@ -1256,14 +1284,14 @@ SELECT
         ELSE '电力质量良好，保持现状'
     END as improvement_suggestions,
     CURRENT_TIMESTAMP as created_at
-FROM dwd_dim_equipment e
+FROM fluss_catalog.sgcc_dw.dwd_dim_equipment e
 LEFT JOIN (
     -- 通过用电数据获取设备对应的客户ID
     SELECT DISTINCT equipment_id, customer_id
-    FROM dwd_fact_power_consumption
-    WHERE record_date >= CURRENT_DATE - INTERVAL '1' DAY
+    FROM fluss_catalog.sgcc_dw.dwd_fact_power_consumption
+    -- 移除时间限制以获取所有数据
 ) ec ON e.equipment_id = ec.equipment_id
-LEFT JOIN dwd_dim_customer c ON ec.customer_id = c.customer_id
+LEFT JOIN fluss_catalog.sgcc_dw.dwd_dim_customer c ON ec.customer_id = c.customer_id
 LEFT JOIN (
     SELECT 
         customer_id,
@@ -1271,8 +1299,8 @@ LEFT JOIN (
         AVG(avg_power_factor) as avg_power_factor,
         AVG(voltage_unbalance_avg) as voltage_unbalance_avg,
         AVG(frequency_deviation_avg) as frequency_deviation_avg
-    FROM dws_customer_hour_power
-    WHERE stat_date >= CURRENT_DATE - INTERVAL '1' DAY
+    FROM fluss_catalog.sgcc_dw.dws_customer_hour_power
+    -- 移除时间限制以获取所有数据
     GROUP BY customer_id
 ) p ON ec.customer_id = p.customer_id
 LEFT JOIN (
@@ -1281,8 +1309,8 @@ LEFT JOIN (
         SUM(CASE WHEN alert_type = 'POWER_INTERRUPTION' THEN total_alerts ELSE 0 END) as interruption_count,
         SUM(CASE WHEN alert_type = 'VOLTAGE_SAG' THEN total_alerts ELSE 0 END) as voltage_sag_count,
         SUM(CASE WHEN alert_type = 'VOLTAGE_SWELL' THEN total_alerts ELSE 0 END) as voltage_swell_count
-    FROM dws_alert_hour_stats
-    WHERE stat_date >= CURRENT_DATE - INTERVAL '1' DAY
+    FROM fluss_catalog.sgcc_dw.dws_alert_hour_stats
+    -- 移除时间限制以获取所有数据
     GROUP BY equipment_id
 ) a ON e.equipment_id = a.equipment_id
 WHERE e.is_active = true;
@@ -1290,7 +1318,7 @@ WHERE e.is_active = true;
 -- 风险评估汇总（基于真实数据）
 INSERT INTO ads_risk_assessment
 SELECT 
-    CAST(HASH_CODE(CAST(CURRENT_TIMESTAMP AS STRING)) AS BIGINT) as assessment_id,
+    1 as assessment_id,  -- 固定ID for daily assessment
     CURRENT_TIMESTAMP as assessment_time,
     -- 综合风险评分
     (
@@ -1377,7 +1405,7 @@ FROM (
         END) as avg_risk,
         SUM(CASE WHEN risk_level IN ('CRITICAL', 'HIGH') THEN 1 ELSE 0 END) as high_risk_count,
         AVG(abnormal_rate) as abnormal_rate
-    FROM dws_equipment_hour_summary
+    FROM fluss_catalog.sgcc_dw.dws_equipment_hour_summary
     WHERE stat_date >= CURRENT_DATE - INTERVAL '1' DAY
 ) equipment_risk
 CROSS JOIN (
@@ -1390,7 +1418,7 @@ CROSS JOIN (
             ELSE 15.0
         END) as avg_risk,
         SUM(CASE WHEN avg_power_factor < 0.85 THEN 1 ELSE 0 END) as poor_quality_count
-    FROM dws_customer_hour_power
+    FROM fluss_catalog.sgcc_dw.dws_customer_hour_power
     WHERE stat_date >= CURRENT_DATE - INTERVAL '1' DAY
 ) power_quality
 CROSS JOIN (
@@ -1402,7 +1430,7 @@ CROSS JOIN (
             WHEN anomaly_count > 2 THEN 25.0
             ELSE 15.0
         END) as avg_risk
-    FROM dws_customer_hour_power
+    FROM fluss_catalog.sgcc_dw.dws_customer_hour_power
     WHERE stat_date >= CURRENT_DATE - INTERVAL '1' DAY
 ) customer_risk
 CROSS JOIN (
@@ -1414,7 +1442,7 @@ CROSS JOIN (
             WHEN alert_level = 'WARNING' THEN 40.0
             ELSE 20.0
         END) as avg_risk
-    FROM dws_alert_hour_stats
+    FROM fluss_catalog.sgcc_dw.dws_alert_hour_stats
     WHERE stat_date >= CURRENT_DATE - INTERVAL '1' DAY
 ) power_risk
 CROSS JOIN (
@@ -1422,14 +1450,14 @@ CROSS JOIN (
     SELECT 
         SUM(critical_alerts) as critical_alerts_24h,
         AVG(avg_resolution_time) as avg_response_time
-    FROM dws_alert_hour_stats
+    FROM fluss_catalog.sgcc_dw.dws_alert_hour_stats
     WHERE stat_date >= CURRENT_DATE - INTERVAL '1' DAY
 ) alert_stats;
 
 -- 能效分析
 INSERT INTO ads_energy_efficiency
 SELECT 
-    CAST(HASH_CODE(CONCAT(scope_type, scope_id, CAST(CURRENT_TIMESTAMP AS STRING))) AS BIGINT) as efficiency_id,
+    CAST(HASH_CODE(CONCAT(scope_type, scope_id)) AS BIGINT) as efficiency_id,  -- 基于scope_type和scope_id的固定hash
     scope_type as analysis_scope,
     scope_id,
     scope_name,
@@ -1524,13 +1552,13 @@ FROM (
             ) < 90.0 THEN '建议定期维护，监控能效指标'
             ELSE '能效表现良好，保持现状'
         END as optimization_suggestions
-    FROM dwd_dim_equipment e
+    FROM fluss_catalog.sgcc_dw.dwd_dim_equipment e
     LEFT JOIN (
         SELECT 
             equipment_id,
             SUM(avg_load_rate * 100.0) as total_energy_input, -- 基于负载率估算能耗
             SUM(avg_load_rate * avg_efficiency) as total_energy_output -- 基于负载率和效率计算输出
-        FROM dws_equipment_hour_summary
+        FROM fluss_catalog.sgcc_dw.dws_equipment_hour_summary
         WHERE stat_date >= CURRENT_DATE - INTERVAL '1' DAY
         GROUP BY equipment_id
     ) s ON e.equipment_id = s.equipment_id
@@ -1614,13 +1642,13 @@ FROM (
             ) < 85.0 THEN '建议关注用电峰谷，合理安排用电时间'
             ELSE '用电效率良好，继续保持'
         END as optimization_suggestions
-    FROM dwd_dim_customer c
+    FROM fluss_catalog.sgcc_dw.dwd_dim_customer c
     LEFT JOIN (
         SELECT 
             customer_id,
             SUM(energy_consumption) as total_consumption,
             SUM(energy_consumption * avg_power_factor) as effective_consumption -- 基于功率因数计算有效用电
-        FROM dws_customer_hour_power
+        FROM fluss_catalog.sgcc_dw.dws_customer_hour_power
         WHERE stat_date >= CURRENT_DATE - INTERVAL '1' DAY
         GROUP BY customer_id
     ) p ON c.customer_id = p.customer_id

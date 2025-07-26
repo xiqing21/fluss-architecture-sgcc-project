@@ -318,22 +318,22 @@ COMMENT ON COLUMN ads_risk_assessment.created_at IS '创建时间 - 记录创建
 -- 能效分析表注释
 COMMENT ON TABLE ads_energy_efficiency IS '能效分析表 - 存储能源效率分析结果和节能建议';
 COMMENT ON COLUMN ads_energy_efficiency.efficiency_id IS '能效分析ID - 能效分析记录的唯一标识';
-COMMENT ON COLUMN ads_energy_efficiency.customer_id IS '客户编号 - 被分析客户的唯一标识';
-COMMENT ON COLUMN ads_energy_efficiency.equipment_id IS '设备编号 - 被分析设备的唯一标识';
-COMMENT ON COLUMN ads_energy_efficiency.analysis_period IS '分析周期 - 能效分析的时间周期';
-COMMENT ON COLUMN ads_energy_efficiency.total_consumption IS '总用电量 - 分析周期内总用电量(kWh)';
-COMMENT ON COLUMN ads_energy_efficiency.peak_consumption IS '峰值用电量 - 分析周期内峰值用电量(kWh)';
-COMMENT ON COLUMN ads_energy_efficiency.off_peak_consumption IS '谷值用电量 - 分析周期内谷值用电量(kWh)';
-COMMENT ON COLUMN ads_energy_efficiency.average_power_factor IS '平均功率因数 - 分析周期内平均功率因数';
-COMMENT ON COLUMN ads_energy_efficiency.load_factor IS '负荷率 - 平均负荷与最大负荷的比值(%)';
-COMMENT ON COLUMN ads_energy_efficiency.efficiency_score IS '能效评分 - 综合能效评分(0-100分)';
-COMMENT ON COLUMN ads_energy_efficiency.efficiency_grade IS '能效等级 - A优秀/B良好/C一般/D较差/E差';
-COMMENT ON COLUMN ads_energy_efficiency.baseline_consumption IS '基准用电量 - 同期基准用电量(kWh)';
-COMMENT ON COLUMN ads_energy_efficiency.savings_potential IS '节能潜力 - 预估节能潜力(kWh)';
-COMMENT ON COLUMN ads_energy_efficiency.cost_savings_potential IS '节费潜力 - 预估节费潜力(元)';
-COMMENT ON COLUMN ads_energy_efficiency.carbon_footprint IS '碳足迹 - 碳排放量(kg CO2)';
-COMMENT ON COLUMN ads_energy_efficiency.efficiency_recommendations IS '节能建议 - 具体的节能改进建议';
+COMMENT ON COLUMN ads_energy_efficiency.analysis_scope IS '分析范围 - EQUIPMENT设备/CUSTOMER客户/REGION区域/SYSTEM系统';
+COMMENT ON COLUMN ads_energy_efficiency.scope_id IS '范围ID - 对应的设备ID、客户ID等标识';
+COMMENT ON COLUMN ads_energy_efficiency.scope_name IS '范围名称 - 对应的设备名称、客户名称等';
+COMMENT ON COLUMN ads_energy_efficiency.analysis_period IS '分析周期 - DAILY日/WEEKLY周/MONTHLY月/YEARLY年度分析';
 COMMENT ON COLUMN ads_energy_efficiency.analysis_time IS '分析时间 - 能效分析执行时间戳';
+COMMENT ON COLUMN ads_energy_efficiency.energy_input IS '输入能量 - 系统输入的总能量(kWh)';
+COMMENT ON COLUMN ads_energy_efficiency.energy_output IS '输出能量 - 系统输出的有效能量(kWh)';
+COMMENT ON COLUMN ads_energy_efficiency.energy_loss IS '能量损失 - 系统运行中的能量损失(kWh)';
+COMMENT ON COLUMN ads_energy_efficiency.efficiency_ratio IS '效率比 - 输出能量与输入能量的比值(%)';
+COMMENT ON COLUMN ads_energy_efficiency.benchmark_efficiency IS '基准效率 - 行业或历史基准效率(%)';
+COMMENT ON COLUMN ads_energy_efficiency.efficiency_gap IS '效率差距 - 与基准效率的差距(%)';
+COMMENT ON COLUMN ads_energy_efficiency.carbon_intensity IS '碳强度 - 单位能量的碳排放强度(kg CO2/kWh)';
+COMMENT ON COLUMN ads_energy_efficiency.cost_per_kwh IS '单位电量成本 - 每千瓦时的成本(元/kWh)';
+COMMENT ON COLUMN ads_energy_efficiency.potential_savings IS '潜在节约 - 通过效率提升可节约的成本(元)';
+COMMENT ON COLUMN ads_energy_efficiency.efficiency_grade IS '效率等级 - A优秀/B良好/C一般/D较差/E差';
+COMMENT ON COLUMN ads_energy_efficiency.optimization_suggestions IS '优化建议 - 具体的能效优化改进建议';
 COMMENT ON COLUMN ads_energy_efficiency.created_at IS '创建时间 - 记录创建时间戳';
 
 COMMIT;
