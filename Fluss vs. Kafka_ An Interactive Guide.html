@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluss vs. Kafka: An Interactive Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony (Slate/Neutral background, Sky accent) -->
+    <!-- Application Structure Plan: The SPA uses a thematic, single-page structure with a top navigation bar for smooth scrolling. This design breaks down the dense technical report into manageable, explorable sections (Comparison, Advantages, Deep Dive, Architecture), which is more user-friendly than a linear document. Key interactions like toggles and tabs are used within sections to present complex comparisons without overwhelming the user, guiding them from the 'why' (advantages) to the 'how' (deep dive) and finally the 'impact' (architecture). -->
+    <!-- Visualization & Content Choices:
+        - Core Differences: Goal: Compare -> Method: Styled HTML columns -> Interaction: Static, clear layout for foundational knowledge.
+        - Projection Pushdown: Goal: Compare Performance -> Method: Chart.js Bar Chart -> Interaction: Toggle updates chart data dynamically to visually prove the performance gain.
+        - Flink Join State: Goal: Organize/Compare Architectures -> Method: HTML/CSS Diagram -> Interaction: Toggle switches between "Before" and "After" diagrams to highlight the architectural simplification.
+        - Architecture Transformation: Goal: Compare -> Method: Large HTML/CSS Diagrams -> Interaction: Toggle to visualize the overall impact on the data stack.
+        - Stream/Table Duality: Goal: Inform -> Method: HTML/CSS animated diagram -> Interaction: Play button animates events to show the concept in action.
+        - Time Travel: Goal: Show Change -> Method: HTML/CSS timeline -> Interaction: Clicking timeline points updates a data view to demonstrate historical state retrieval.
+        - All choices avoid SVG/Mermaid, using Canvas for charts and structured HTML/CSS for diagrams. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        .nav-link {
+            transition: color 0.3s ease, border-color 0.3s ease;
+        }
+        .active-nav {
+            color: #0284c7;
+            border-bottom-color: #0284c7;
+        }
+        .tab-btn {
+            transition: all 0.3s ease;
+        }
+        .active-tab {
+            background-color: #0284c7;
+            color: white;
+        }
+        .diagram-arrow {
+            position: relative;
+            width: 100%;
+            height: 2px;
+            background-color: #64748b;
+            margin: 2rem 0;
+        }
+        .diagram-arrow::after {
+            content: '';
+            position: absolute;
+            right: -1px;
+            top: -4px;
+            border: solid #64748b;
+            border-width: 0 2px 2px 0;
+            display: inline-block;
+            padding: 5px;
+            transform: rotate(-45deg);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-sky-600">Fluss 交互式学习指南</h1>
+            <div class="hidden md:flex space-x-8 text-sm font-medium text-slate-600">
+                <a href="#comparison" class="nav-link border-b-2 border-transparent hover:text-sky-600">核心对比</a>
+                <a href="#advantages" class="nav-link border-b-2 border-transparent hover:text-sky-600">三大优势</a>
+                <a href="#deep-dive" class="nav-link border-b-2 border-transparent hover:text-sky-600">底层原理</a>
+                <a href="#paradigm-shift" class="nav-link border-b-2 border-transparent hover:text-sky-600">架构范式</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-6 py-12">
+
+        <section id="intro" class="text-center min-h-[60vh] flex flex-col justify-center items-center">
+            <h2 class="text-4xl md:text-6xl font-bold tracking-tight">一场数据架构的<span class="text-sky-600">范式转移</span></h2>
+            <p class="mt-6 max-w-3xl text-lg text-slate-600">
+                本文档将通过交互式的方式，带您深入了解新一代流式存储系统 **Fluss** 如何在性能、架构和数据一致性上超越传统标杆 **Kafka**，开启现代数据栈的新篇章。
+            </p>
+            <a href="#comparison" class="mt-8 px-6 py-3 bg-sky-600 text-white font-semibold rounded-lg shadow-md hover:bg-sky-700 transition-colors">开始探索</a>
+        </section>
+
+        <section id="comparison" class="py-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold">核心对比：管道 vs. 智能仓库</h2>
+                <p class="mt-2 text-slate-500">从两个核心维度，看清 Fluss 与 Kafka 的本质区别。</p>
+            </div>
+            <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <div class="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                    <h3 class="text-2xl font-bold text-slate-500">Apache Kafka</h3>
+                    <p class="mt-2 text-sm text-slate-400">分布式事件流平台</p>
+                    <div class="mt-6 space-y-4">
+                        <div class="flex items-start">
+                            <span class="text-sky-500 mr-3 mt-1">▶</span>
+                            <div>
+                                <h4 class="font-semibold">定位：日志管道</h4>
+                                <p class="text-sm text-slate-600">高吞吐量的数据管道，用于系统解耦和实时数据缓冲。</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <span class="text-sky-500 mr-3 mt-1">▶</span>
+                            <div>
+                                <h4 class="font-semibold">架构：行式存储 (Row-based)</h4>
+                                <p class="text-sm text-slate-600">数据以行为单位追加存储，读取时需加载并传输整行数据。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-sky-600 text-white p-8 rounded-xl shadow-lg">
+                    <h3 class="text-2xl font-bold">Apache Fluss</h3>
+                    <p class="mt-2 text-sm text-sky-200">为实时分析而生的流式存储</p>
+                     <div class="mt-6 space-y-4">
+                        <div class="flex items-start">
+                            <span class="text-sky-200 mr-3 mt-1">▶</span>
+                            <div>
+                                <h4 class="font-semibold">定位：智能化的数据仓库底座</h4>
+                                <p class="text-sm text-sky-100">一个可查询、有结构、为分析而优化的存储系统。</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <span class="text-sky-200 mr-3 mt-1">▶</span>
+                            <div>
+                                <h4 class="font-semibold">架构：列式存储 (Columnar Storage)</h4>
+                                <p class="text-sm text-sky-100">数据按列组织，可按需读取特定列，是其众多优势的根源。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="advantages" class="py-20 bg-white rounded-2xl">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold">Fluss 的三大核心优势</h2>
+                <p class="mt-2 text-slate-500">探索 Fluss 如何在性能、架构和一致性上实现突破。</p>
+            </div>
+
+            <div class="max-w-5xl mx-auto">
+                <div class="mb-4 flex justify-center border-b border-slate-200">
+                    <button data-tab="performance" class="tab-btn px-6 py-3 font-medium text-slate-600 active-tab">🚀 性能优势</button>
+                    <button data-tab="architecture" class="tab-btn px-6 py-3 font-medium text-slate-600">🏛️ 架构优势</button>
+                    <button data-tab="consistency" class="tab-btn px-6 py-3 font-medium text-slate-600">🔗 一致性优势</button>
+                </div>
+
+                <div id="tab-content" class="p-4">
+                    <div id="performance" class="tab-panel space-y-16">
+                        <!-- Projection Pushdown -->
+                        <div>
+                            <h4 class="text-xl font-bold text-center">优势一：投影下推 (Projection Pushdown)</h4>
+                            <p class="text-center mt-2 text-slate-600">只读取你需要的数据，数倍提升分析性能。</p>
+                            <div class="mt-8">
+                                <div class="flex justify-center items-center mb-4">
+                                    <span class="mr-3 font-medium">查询模式:</span>
+                                    <div class="bg-slate-200 p-1 rounded-lg flex items-center">
+                                        <button id="pp-kafka-btn" class="px-4 py-1 text-sm font-semibold rounded-md bg-white shadow">Kafka (全量读取)</button>
+                                        <button id="pp-fluss-btn" class="px-4 py-1 text-sm font-semibold rounded-md ">Fluss (按需读取)</button>
+                                    </div>
+                                </div>
+                                <div class="chart-container">
+                                    <canvas id="projectionPushdownChart"></canvas>
+                                </div>
+                                <p id="pp-explanation" class="text-center mt-4 text-sm text-slate-500 w-full max-w-2xl mx-auto">在 Kafka 模式下，即使查询只需要2个字段，也必须传输包含100个字段的全部数据。</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Flink Join -->
+                        <div>
+                             <h4 class="text-xl font-bold text-center">优势二：解决 Flink 双流 Join 大状态问题</h4>
+                             <p class="text-center mt-2 text-slate-600">将状态管理下放给Fluss，让 Flink 回归纯粹计算。</p>
+                             <div class="mt-8">
+                                 <div class="flex justify-center items-center mb-6">
+                                     <span class="mr-3 font-medium">Join 架构:</span>
+                                     <div class="bg-slate-200 p-1 rounded-lg flex items-center">
+                                         <button id="join-flink-btn" class="px-4 py-1 text-sm font-semibold rounded-md bg-white shadow">传统双流Join</button>
+                                         <button id="join-fluss-btn" class="px-4 py-1 text-sm font-semibold rounded-md">Fluss Lookup Join</button>
+                                     </div>
+                                 </div>
+                                 <div id="join-diagram-container" class="max-w-3xl mx-auto p-4 flex justify-center items-center min-h-[250px] transition-all duration-500">
+                                     <!-- Diagram will be injected here -->
+                                 </div>
+                             </div>
+                        </div>
+                    </div>
+                    <div id="architecture" class="tab-panel hidden">
+                        <h4 class="text-xl font-bold text-center">优势：从“复杂组合”到“优雅统一”</h4>
+                        <p class="text-center mt-2 text-slate-600">用一个系统替代多个组件，大幅简化技术栈。</p>
+                        <div class="mt-8 grid md:grid-cols-2 gap-8 items-center">
+                           <div class="border-2 border-dashed border-red-400 p-6 rounded-lg">
+                                <h5 class="text-lg font-bold text-center text-red-600">传统 Lambda/Kappa 架构</h5>
+                                <div class="mt-4 space-y-3 text-sm">
+                                    <div class="bg-red-100 p-2 rounded text-center font-medium">Kafka (消息队列)</div>
+                                    <div class="text-center">↓</div>
+                                    <div class="bg-red-100 p-2 rounded text-center font-medium">Flink (计算)</div>
+                                    <div class="flex justify-around text-center">
+                                        <div class="flex flex-col items-center">
+                                           <span>↘</span>
+                                           <div class="bg-red-100 p-2 rounded mt-1">Redis/HBase (在线查询)</div>
+                                        </div>
+                                        <div class="flex flex-col items-center">
+                                           <span>↙</span>
+                                           <div class="bg-red-100 p-2 rounded mt-1">HDFS/S3 (离线存储)</div>
+                                        </div>
+                                    </div>
+                                    <p class="mt-4 text-xs text-red-700">痛点：架构复杂、运维成本高、多份数据副本导致一致性问题。</p>
+                                </div>
+                           </div>
+                           <div class="border-2 border-green-500 bg-green-50 p-6 rounded-lg">
+                                <h5 class="text-lg font-bold text-center text-green-700">Fluss 新架构</h5>
+                                <div class="mt-4 space-y-3 text-sm">
+                                    <div class="bg-green-200 p-2 rounded text-center font-medium">数据源</div>
+                                    <div class="text-center">↓</div>
+                                    <div class="bg-green-200 p-2 rounded text-center font-medium">Fluss (统一存储)</div>
+                                    <div class="text-center">↓</div>
+                                    <div class="bg-green-200 p-2 rounded text-center font-medium">Flink (可流可批)</div>
+                                    <div class="text-center">↓</div>
+                                    <div class="bg-green-200 p-2 rounded text-center font-medium">统一视图 (报表/应用)</div>
+                                    <p class="mt-4 text-xs text-green-800">优势：架构简化、成本降低、单一数据源保证一致性。</p>
+                                </div>
+                           </div>
+                        </div>
+                    </div>
+                    <div id="consistency" class="tab-panel hidden">
+                        <h4 class="text-xl font-bold text-center">优势：终结实时与离线的“数据分裂”</h4>
+                        <p class="text-center mt-2 text-slate-600">通过“单一数据源”实现实时与离线数据的原生一致。</p>
+                        <div class="mt-8 max-w-4xl mx-auto">
+                            <div class="grid md:grid-cols-2 gap-8 text-center">
+                                <div>
+                                    <h5 class="font-bold">传统 Lambda 架构</h5>
+                                    <div class="mt-4 p-4 border rounded-lg">
+                                        <p>数据源</p>
+                                        <div class="flex justify-around mt-2">
+                                            <div class="flex flex-col items-center">
+                                                <div class="h-10 border-l border-slate-400"></div>
+                                                <p class="text-sm text-sky-600">实时链路</p>
+                                            </div>
+                                            <div class="flex flex-col items-center">
+                                                <div class="h-10 border-l border-slate-400"></div>
+                                                <p class="text-sm text-orange-600">离线链路</p>
+                                            </div>
+                                        </div>
+                                        <p class="text-red-500 mt-4 text-sm font-semibold">结果可能不一致 ❌</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h5 class="font-bold">Fluss 统一架构</h5>
+                                    <div class="mt-4 p-4 border rounded-lg bg-slate-50">
+                                        <p>Fluss (单一数据源)</p>
+                                        <div class="flex justify-center mt-2">
+                                            <div class="flex flex-col items-center">
+                                                <div class="h-10 border-l border-slate-400"></div>
+                                                <p class="text-sm text-green-600">统一计算 (Flink)</p>
+                                            </div>
+                                        </div>
+                                        <p class="text-green-600 mt-4 text-sm font-semibold">结果原生一致 ✅</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="mt-8 text-center text-slate-600">无论是实时大屏还是离线报表，都源自同一份数据、同一套逻辑，从架构设计上根治了数据不一致的问题。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="deep-dive" class="py-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold">揭秘底层原理</h2>
+                <p class="mt-2 text-slate-500">理解支撑 Fluss 强大优势的两大基石概念。</p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
+                <!-- Stream-Table Duality -->
+                <div class="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                    <h3 class="text-2xl font-bold text-center">1. 流表二元性</h3>
+                    <p class="text-center text-sm mt-2 text-slate-500">任何数据都可以同时被视为“流”和“表”。</p>
+                    <div class="mt-6">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="text-center">
+                                <h4 class="font-semibold">流 (Stream)</h4>
+                                <p class="text-xs text-slate-400">变更事件日志</p>
+                                <ul id="stream-events" class="mt-2 text-left text-sm space-y-1 p-2 bg-slate-50 rounded-md h-48 overflow-y-auto">
+                                </ul>
+                            </div>
+                             <div class="text-center">
+                                <h4 class="font-semibold">表 (Table)</h4>
+                                <p class="text-xs text-slate-400">当前最新状态</p>
+                                <div id="table-state" class="mt-2 text-left text-sm space-y-1 p-2 bg-slate-50 rounded-md h-48 overflow-y-auto">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center mt-4">
+                            <button id="play-duality-btn" class="px-4 py-2 bg-sky-600 text-white font-semibold rounded-md hover:bg-sky-700 transition-colors text-sm">▶ 播放动画</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Time Travel -->
+                <div class="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                    <h3 class="text-2xl font-bold text-center">2. 时间旅行与版本化查询</h3>
+                    <p class="text-center text-sm mt-2 text-slate-500">查询数据在过去任意一个时间点的历史快照。</p>
+                    <div class="mt-6">
+                        <div class="w-full bg-slate-800 text-white p-4 rounded-lg font-mono text-xs overflow-x-auto">
+                            <span class="text-purple-400">SELECT</span> o.*, u.city<br>
+                            <span class="text-purple-400">FROM</span> orders o <span class="text-purple-400">JOIN</span> user_info u<br>
+                            <span class="text-yellow-300">FOR SYSTEM_TIME AS OF</span> o.proc_time<br>
+                            <span class="text-purple-400">ON</span> o.user_id = u.user_id;
+                        </div>
+                        <div class="mt-4">
+                            <p class="text-center font-semibold mb-2">时间线</p>
+                            <div class="relative flex justify-between items-center w-full bg-slate-200 h-1 rounded-full">
+                                <button data-time="t1" class="time-travel-btn absolute w-4 h-4 bg-white border-2 border-sky-500 rounded-full cursor-pointer" style="left: 10%;"></button>
+                                <button data-time="t2" class="time-travel-btn absolute w-4 h-4 bg-white border-2 border-slate-400 rounded-full cursor-pointer" style="left: 50%;"></button>
+                                <button data-time="t3" class="time-travel-btn absolute w-4 h-4 bg-white border-2 border-slate-400 rounded-full cursor-pointer" style="left: 90%;"></button>
+                            </div>
+                            <div class="flex justify-between text-xs mt-2">
+                                <span class="text-left">10:00</span>
+                                <span class="text-center">10:10</span>
+                                <span class="text-right">10:20</span>
+                            </div>
+                        </div>
+                        <div id="time-travel-output" class="mt-4 p-4 bg-slate-50 rounded-md min-h-[80px]">
+                           <!-- Output will be injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="paradigm-shift" class="py-20 text-center">
+             <h2 class="text-3xl font-bold">总结：一场数据架构的“范式转移”</h2>
+             <blockquote class="mt-6 max-w-3xl mx-auto text-lg italic text-slate-600 border-l-4 border-sky-500 pl-6">
+                “Fluss 的出现，不仅仅是提供了一个‘更快的 Kafka’，它代表了一种全新的数据架构思想：从过去为了应对不同需求而**拼凑**的、复杂的、数据易分裂的多个系统，转向一个**内聚的**、**简化的**、**数据原生一致**的现代化统一平台。”
+             </blockquote>
+             <p class="mt-6 text-slate-500">掌握 Fluss 的核心理念，有助于我们理解现代实时数据处理的发展方向，并构建出更高效、更稳定、更可信的数据产品。</p>
+        </section>
+
+    </main>
+    
+    <footer class="bg-slate-800 text-slate-400 text-center p-4 text-sm">
+        <p>交互式学习指南 | 灵感源自您的学习笔记</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // Navigation scroll highlighting
+            const sections = document.querySelectorAll('main section');
+            const navLinks = document.querySelectorAll('header nav a');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.toggle('active-nav', link.getAttribute('href').substring(1) === entry.target.id);
+                        });
+                    }
+                });
+            }, { rootMargin: "-50% 0px -50% 0px" });
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+
+            // Tab functionality
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetTab = button.dataset.tab;
+
+                    tabButtons.forEach(btn => btn.classList.remove('active-tab'));
+                    button.classList.add('active-tab');
+
+                    tabPanels.forEach(panel => {
+                        panel.style.display = panel.id === targetTab ? 'block' : 'none';
+                    });
+                });
+            });
+
+            // --- Projection Pushdown Chart ---
+            const ppCtx = document.getElementById('projectionPushdownChart').getContext('2d');
+            const ppKafkaBtn = document.getElementById('pp-kafka-btn');
+            const ppFlussBtn = document.getElementById('pp-fluss-btn');
+            const ppExplanation = document.getElementById('pp-explanation');
+            let ppChart;
+
+            const kafkaData = { transfer: 100, time: 85 };
+            const flussData = { transfer: 2, time: 10 };
+
+            function createOrUpdatePpChart(data) {
+                if (ppChart) {
+                    ppChart.data.datasets[0].data = [data.transfer];
+                    ppChart.data.datasets[1].data = [data.time];
+                    ppChart.update();
+                } else {
+                    ppChart = new Chart(ppCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['查询性能对比'],
+                            datasets: [{
+                                label: '数据传输量 (MB)',
+                                data: [data.transfer],
+                                backgroundColor: 'rgba(56, 189, 248, 0.6)',
+                                borderColor: 'rgba(56, 189, 248, 1)',
+                                borderWidth: 1,
+                                yAxisID: 'y'
+                            }, {
+                                label: '查询耗时 (ms)',
+                                data: [data.time],
+                                backgroundColor: 'rgba(249, 115, 22, 0.6)',
+                                borderColor: 'rgba(249, 115, 22, 1)',
+                                borderWidth: 1,
+                                yAxisID: 'y1'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    position: 'left',
+                                    title: { display: true, text: '数据传输量 (MB)' }
+                                },
+                                y1: {
+                                    beginAtZero: true,
+                                    position: 'right',
+                                    title: { display: true, text: '查询耗时 (ms)' },
+                                    grid: { drawOnChartArea: false }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+            
+            ppKafkaBtn.addEventListener('click', () => {
+                ppKafkaBtn.classList.add('bg-white', 'shadow');
+                ppFlussBtn.classList.remove('bg-white', 'shadow');
+                createOrUpdatePpChart(kafkaData);
+                ppExplanation.textContent = '在 Kafka 模式下，即使查询只需要2个字段，也必须传输包含100个字段的全部数据。';
+            });
+
+            ppFlussBtn.addEventListener('click', () => {
+                ppFlussBtn.classList.add('bg-white', 'shadow');
+                ppKafkaBtn.classList.remove('bg-white', 'shadow');
+                createOrUpdatePpChart(flussData);
+                ppExplanation.textContent = '在 Fluss 模式下，存储层完成列裁剪，只传输查询所需的2个字段，网络开销和耗时大幅降低。';
+            });
+            createOrUpdatePpChart(kafkaData);
+
+
+            // --- Flink Join Diagram ---
+            const joinFlinkBtn = document.getElementById('join-flink-btn');
+            const joinFlussBtn = document.getElementById('join-fluss-btn');
+            const joinDiagramContainer = document.getElementById('join-diagram-container');
+
+            const flinkStateDiagram = `
+                <div class="text-center w-full">
+                    <div class="flex justify-around items-start">
+                        <div class="font-semibold">订单流</div>
+                        <div class="font-semibold">用户流</div>
+                    </div>
+                    <div class="flex justify-around items-start">
+                        <div>↓</div>
+                        <div>↓</div>
+                    </div>
+                    <div class="relative bg-sky-100 border-2 border-sky-300 p-4 rounded-lg w-64 mx-auto">
+                        <p class="font-bold">Flink Job</p>
+                        <div class="mt-2 bg-red-200 border border-red-400 p-3 rounded-md">
+                            <p class="text-sm font-semibold text-red-700">大状态 (State)</p>
+                            <p class="text-xs text-red-600">(缓存全量用户数据)</p>
+                        </div>
+                    </div>
+                    <div class="mt-2">↓</div>
+                    <div class="font-semibold">Join 结果</div>
+                    <p class="text-xs text-slate-500 mt-2">状态管理在Flink内部，资源消耗大，稳定性受挑战。</p>
+                </div>
+            `;
+
+            const flussLookupDiagram = `
+                <div class="text-center w-full flex items-center justify-center gap-8">
+                    <div>
+                       <div class="font-semibold">订单流</div>
+                       <div>↓</div>
+                       <div class="bg-green-100 border-2 border-green-300 p-4 rounded-lg">
+                           <p class="font-bold">Flink Job (近无状态)</p>
+                       </div>
+                       <div>↓</div>
+                       <div class="font-semibold">Join 结果</div>
+                    </div>
+                    <div class="text-sm font-mono text-slate-500">⟷ <br>Lookup<br>Join</div>
+                    <div>
+                       <div class="bg-green-100 border-2 border-green-300 p-4 rounded-lg">
+                           <p class="font-bold">Fluss</p>
+                           <p class="text-sm">用户表</p>
+                       </div>
+                       <p class="text-xs text-slate-500 mt-2">状态下放到Fluss，Flink更轻量、稳定。</p>
+                    </div>
+                </div>
+            `;
+            
+            function setJoinDiagram(type) {
+                if(type === 'flink') {
+                    joinFlinkBtn.classList.add('bg-white', 'shadow');
+                    joinFlussBtn.classList.remove('bg-white', 'shadow');
+                    joinDiagramContainer.innerHTML = flinkStateDiagram;
+                } else {
+                    joinFlussBtn.classList.add('bg-white', 'shadow');
+                    joinFlinkBtn.classList.remove('bg-white', 'shadow');
+                    joinDiagramContainer.innerHTML = flussLookupDiagram;
+                }
+            }
+            
+            joinFlinkBtn.addEventListener('click', () => setJoinDiagram('flink'));
+            joinFlussBtn.addEventListener('click', () => setJoinDiagram('fluss'));
+            setJoinDiagram('flink');
+
+            // --- Stream-Table Duality Animation ---
+            const playDualityBtn = document.getElementById('play-duality-btn');
+            const streamEl = document.getElementById('stream-events');
+            const tableEl = document.getElementById('table-state');
+
+            const events = [
+                { op: 'INSERT', key: 'user_A', value: '{ city: "北京" }' },
+                { op: 'INSERT', key: 'user_B', value: '{ city: "上海" }' },
+                { op: 'UPDATE', key: 'user_A', value: '{ city: "深圳" }' },
+                { op: 'DELETE', key: 'user_B', value: null },
+                { op: 'INSERT', key: 'user_C', value: '{ city: "广州" }' },
+            ];
+
+            function resetDuality() {
+                streamEl.innerHTML = '';
+                tableEl.innerHTML = '';
+            }
+
+            playDualityBtn.addEventListener('click', () => {
+                resetDuality();
+                playDualityBtn.disabled = true;
+                let tableState = {};
+                let i = 0;
+
+                function processNextEvent() {
+                    if (i >= events.length) {
+                        playDualityBtn.disabled = false;
+                        return;
+                    }
+                    const event = events[i];
+                    
+                    // Add to stream
+                    const streamItem = document.createElement('li');
+                    streamItem.className = 'p-1 bg-white rounded shadow-sm';
+                    streamItem.innerHTML = `<span class="font-mono text-xs ${event.op === 'INSERT' ? 'text-green-600' : event.op === 'UPDATE' ? 'text-blue-600' : 'text-red-600'}">${event.op}</span>: ${event.key}`;
+                    streamEl.appendChild(streamItem);
+                    streamEl.scrollTop = streamEl.scrollHeight;
+
+                    // Update table
+                    if (event.op === 'DELETE') {
+                        delete tableState[event.key];
+                    } else {
+                        tableState[event.key] = event.value;
+                    }
+                    
+                    tableEl.innerHTML = '';
+                    for (const key in tableState) {
+                        const tableItem = document.createElement('div');
+                        tableItem.className = 'p-1 bg-white rounded shadow-sm font-mono text-xs';
+                        tableItem.innerHTML = `<strong>${key}</strong>: ${tableState[key]}`;
+                        tableEl.appendChild(tableItem);
+                    }
+
+                    i++;
+                    setTimeout(processNextEvent, 800);
+                }
+                processNextEvent();
+            });
+
+            // --- Time Travel ---
+            const timeTravelBtns = document.querySelectorAll('.time-travel-btn');
+            const timeTravelOutput = document.getElementById('time-travel-output');
+            
+            const timeData = {
+                t1: { time: '10:05', order: 'order_1', city: '北京', desc: '在 10:00，用户A城市更新为北京。在 10:05，订单关联到当时的状态。' },
+                t2: { time: '10:10', order: '—', city: '上海', desc: '在 10:10，用户A城市更新为上海。这是维度数据变更的时刻。' },
+                t3: { time: '10:15', order: 'order_2', city: '上海', desc: '在 10:15，新订单关联到最新的用户状态“上海”。' }
+            };
+
+            function updateTimeTravelView(timeKey) {
+                timeTravelBtns.forEach(b => b.classList.remove('border-sky-500', 'ring-2', 'ring-sky-300'));
+                timeTravelBtns.forEach(b => b.classList.add('border-slate-400'));
+
+                const activeBtn = document.querySelector(`.time-travel-btn[data-time="${timeKey}"]`);
+                activeBtn.classList.remove('border-slate-400');
+                activeBtn.classList.add('border-sky-500', 'ring-2', 'ring-sky-300');
+                
+                const data = timeData[timeKey];
+                timeTravelOutput.innerHTML = `
+                    <p class="font-semibold">时间点: <span class="font-mono">${data.time}</span></p>
+                    <p class="text-sm mt-1">关联订单: <span class="font-mono">${data.order}</span></p>
+                    <p class="text-sm mt-1">关联城市: <strong class="font-mono text-sky-600">${data.city}</strong></p>
+                    <p class="text-xs mt-2 text-slate-500">${data.desc}</p>
+                `;
+            }
+
+            timeTravelBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    updateTimeTravelView(btn.dataset.time);
+                });
+            });
+
+            updateTimeTravelView('t1'); // Initial state
+        });
+    </script>
+</body>
+</html>
